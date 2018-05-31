@@ -51,16 +51,15 @@
 
      [(_ {~module m:module-binding} ~! x:id)
       #:with m- #'m.internal-id
-      #:do [(define decl
-              (hash-ref (sig-decls #'m.sig)
-                        (namespaced:value (syntax-e #'x))
-                #f))]
+      #:do [(define key (namespaced:value (syntax-e #'x)))
+            (define decl
+              (hash-ref (sig-decls #'m.sig) key #f))]
       #:fail-when (and (not (or (decl-val? decl)
                                 (decl-constructor? decl)))
                        #'x)
       (format "not bound to a value in module ~a" (syntax-e #'m))
 
-      #:with expr (hash-ref (@ m.value-ids) (syntax-e #'x))
+      #:with expr (hash-ref (@ m.value-ids) key)
 
       #:with (_ t) decl
       #:with {~var t_qual (type (@ m.expansion-ctx))} #'t
@@ -73,14 +72,13 @@
    (syntax-parser
      #:literal-sets [sig-literals]
      [(_ {~module m:module-binding} ~! x:id)
-      #:do [(define decl
-              (hash-ref (sig-decls #'m.sig)
-                        (namespaced:value (syntax-e #'x))
-                #f))]
+      #:do [(define key (namespaced:value (syntax-e #'x)))
+            (define decl
+              (hash-ref (sig-decls #'m.sig) key #f))]
       #:fail-when (and (not (decl-constructor? decl)) #'x)
       (format "not bound to a constructor in module ~a" (syntax-e #'m))
 
-      (hash-ref (@ m.pattern-ids) (syntax-e #'x))])))
+      (hash-ref (@ m.pattern-ids) key)])))
 
 (define-syntax-parser #%dot_τ
   [(_ {~module m:module-binding} ~! x:id)
