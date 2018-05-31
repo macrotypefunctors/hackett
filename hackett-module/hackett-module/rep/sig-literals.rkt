@@ -11,6 +11,11 @@
          (for-syntax sig-literals
                      sig-literal-ids
                      ; ---
+                     namespaced namespaced?
+                     namespaced-namespace namespaced-symbol
+                     NAMESPACE:value namespaced:value
+                     NAMESPACE:type  namespaced:type
+                     ; ---
                      sig-internal-ids
                      sig-decls
                      decl-type?
@@ -23,12 +28,24 @@
                      syntax/parse
                      "../util/stx.rkt"))
 
+;; A Key is a (namespaced Namespace Symbol)
+;; A Namespace is one of:
+;;  - 'value
+;;  - 'type
+(begin-for-syntax
+  (struct namespaced [namespace symbol] #:prefab)
+  (define NAMESPACE:value 'value)
+  (define NAMESPACE:type 'type)
+  (define (namespaced:value sym) (namespaced NAMESPACE:value sym))
+  (define (namespaced:type sym) (namespaced NAMESPACE:type sym))
+  )
+
 ;; (#%sig
-;;   #:hash([name . internal-id]
-;;          ...)
-;;   #:hash([name . decl]
+;;   #:hash([key . internal-id]
+;;           ...)
+;;   #:hash([key . decl]
 ;;          ...))
-;; where the name sets are the same,
+;; where the key sets are the same,
 ;; and all the internal-ids are bound
 ;; in all the decls
 (define-syntax #%sig #f)
@@ -71,14 +88,14 @@
 
 (begin-for-syntax
 
-  ;; Sig -> [Hashof Symbol Identifier]
+  ;; Sig -> [Hashof Key Identifier]
   (define (sig-internal-ids s)
     (syntax-parse s
       #:literal-sets [sig-literals]
       [(sig:#%sig internal-ids:hash-literal _)
        (attribute internal-ids.value)]))
 
-  ;; Sig -> [Hashof Symbol Decl]
+  ;; Sig -> [Hashof Key Decl]
   (define (sig-decls s)
     (syntax-parse s
       #:literal-sets [sig-literals]

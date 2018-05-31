@@ -19,6 +19,7 @@
          hackett/private/typecheck
          "../util/stx.rkt"
          "../util/stx-traverse.rkt"
+         "../util/hash.rkt"
          "../check/module-var.rkt"
          (for-syntax racket/base)
          (for-template racket/base
@@ -87,10 +88,11 @@
   #:commit
   #:literal-sets [sig-literals]
 
+  ;; A Key is a (namespaced Namespace Symbol)
   ;; (#%sig
-  ;;   #:hash([name . internal-id]
+  ;;   #:hash([key . internal-id]
   ;;          ...)
-  ;;   #:hash([name . decl]
+  ;;   #:hash([key . decl]
   ;;          ...))
   [pattern (head:#%sig
             internal-ids:hash-literal
@@ -107,9 +109,7 @@
            #:with internal-ids- (intro #'internal-ids)
            #:with [{~var decl- (decl intdef-ctx*)} ...] (attribute decls.values)
            #:with decls-expansion-
-           (for/hash ([name (in-list (attribute decls.keys))]
-                      [decl- (in-list (attribute decl-.expansion))])
-             (values name decl-))
+           (hash-zip (attribute decls.keys) (attribute decl-.expansion))
            #:attr expansion (~>> (syntax/loc/props this-syntax
                                                    (head internal-ids-
                                                          decls-expansion-))
@@ -194,7 +194,7 @@
      #`(sig
         internal-ids
         #,(hash-update (attribute decls.value)
-                       sym
+                       (namespaced:type sym)
             (λ (prev-decl)
               (syntax-parse prev-decl #:literal-sets [sig-literals]
                 [(type-decl:#%type-decl (#%opaque))

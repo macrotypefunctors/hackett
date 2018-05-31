@@ -19,6 +19,7 @@
                      syntax/parse/experimental/template
                      hackett/private/util/stx
                      "rep/sig.rkt"
+                     "util/hash.rkt"
                      ))
 
 (define-syntax val #f)
@@ -29,40 +30,46 @@
     [val type data])
 
   (define-syntax-class sig-entry
-    #:attributes [[id 1] [decl 1]]
+    #:attributes [[key 1] [id 1] [decl 1]]
     #:literal-sets [sig-surface-literals]
     [pattern (val x:id : {~type val-type:expr})
+      #:with [key ...]  #`[#,(namespaced:value #'x)]
       #:with [id ...]   #'[x]
       #:with [decl ...] #'[(#%val-decl val-type)]]
     [pattern (data {~type X:id} c:data-constructor-spec ...)
+      #:with X-key (namespaced:type (attribute X))
+      #:with [c-key ...] (map namespaced:value (attribute c.tag))
       #:with [c-type ...] (type-namespace-introduce
                            (template [(?->* c.arg ... X) ...]))
-      #:with [[id decl] ...] #`[[X (#%type-decl (#%data c.tag ...))]
-                                [c.tag (#%constructor-decl c-type)]
-                                ...]]
+      #:with [[key id decl] ...]
+      #`[[X-key X (#%type-decl (#%data c.tag ...))]
+         [c-key c.tag (#%constructor-decl c-type)]
+         ...]]
     [pattern (type {~type X:id})
+      #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
       #:with [decl ...] #'[(#%type-decl (#%opaque))]]
     [pattern (type {~type X:id} = {~type alias-type:expr})
+      #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
       #:with [decl ...] #'[(#%type-decl (#%alias alias-type))]])
 
   (define-syntax-class sig-entries
-    #:attributes [[id 1] [decl 1]]
+    #:attributes [[key 1] [id 1] [decl 1]]
     [pattern [entry:sig-entry ...]
+      #:with [key ...] #'[entry.key ... ...]
       #:with [id ...] #'[entry.id ... ...]
       #:with [decl ...] #'[entry.decl ... ...]])
+
   )
 
 (define-syntax-parser sig
   [(_ ent ...)
    #:with entries:sig-entries ((make-syntax-introducer #t) #'[ent ...])
+   (define keys (map syntax->datum (attribute entries.key)))
    #`(#%sig
-      #,(for/hash ([id (in-list (attribute entries.id))])
-          (values (syntax-e id) id))
-      #,(for/hash ([id (in-list (attribute entries.id))]
-                   [decl (in-list (attribute entries.decl))])
-          (values (syntax-e id) decl)))])
+      #,(hash-zip keys (attribute entries.id))
+      #,(hash-zip keys (attribute entries.decl)))])
 
 (define-syntax-parser Π
   #:datum-literals [:]
