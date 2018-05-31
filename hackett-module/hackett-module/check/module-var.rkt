@@ -131,15 +131,15 @@
       ;; get the constructors
       (define/syntax-parse
         ({~literal #%type-decl} ({~literal #%data} c ...))
-        (hash-ref (sig-decls s) sym))
+        (hash-ref (sig-decls s) (namespaced:type sym)))
 
       ;; find the "new" constructor ids for the module being introduced
       (define/syntax-parse
         [c-binding-id ...]
         (for/list ([c-id (in-list (@ c))])
-          (or (for/first ([(sym id) (in-hash (sig-internal-ids s))]
+          (or (for/first ([(key id) (in-hash (sig-internal-ids s))]
                           #:when (free-identifier=? c-id id))
-                (hash-ref constructor-sym->id sym))
+                (hash-ref constructor-sym->id (namespaced-symbol key)))
               (raise-syntax-error c-id
                 "constructor declaration not found in signature"))))
 
@@ -181,7 +181,7 @@
         (list internal-id sym pat-id val-id))
       (define/syntax-parse
         ({~literal #%constructor-decl} {~var t (type type-expansion-ctx)})
-        (hash-ref (sig-decls s) sym))
+        (hash-ref (sig-decls s) (namespaced:value sym)))
 
       (list id
             #'(data-constructor
@@ -267,8 +267,9 @@
      ;;  - #%alias maps to the rhs
      ;;  - #%opaque maps to (#%type:con <opaque-id>)
 
-     (for ([(sym decl) (in-hash (@ decls.value))])
-       (define internal-id (hash-ref (@ internal-ids.value) sym))
+     (for ([(key decl) (in-hash (@ decls.value))])
+       (define internal-id (hash-ref (@ internal-ids.value) key))
+       (define sym (namespaced-symbol key))
        (syntax-parse decl
          #:literal-sets [sig-literals]
 
@@ -328,15 +329,19 @@
 
 ;; ---------------------------------------------------------
 
-;; Signature [Decl -> Bool] -> [Listof Symbol]
-(define (matching-decl-symbols s decl-matches?)
+;; Signature [Decl -> Bool] -> [Listof Key]
+(define (matching-decl-keys s decl-matches?)
   (syntax-parse s
     #:literal-sets [sig-literals]
     [(#%pi-sig . _) '()]
     [(#%sig . _)
-     (for/list ([(sym decl) (in-hash (sig-decls s))]
+     (for/list ([(key decl) (in-hash (sig-decls s))]
                 #:when (decl-matches? decl))
-       sym)]))
+       key)]))
+
+;; Signature [Decl -> Bool] -> [Listof Symbol]
+(define (matching-decl-symbols s decl-matches?)
+  (map namespaced-symbol (matching-decl-keys s decl-matches?)))
 
 ;; SymStr [Listof SymStr] -> [Listof Id]
 (define (generate-prefixed-temporaries prefix symstrs)

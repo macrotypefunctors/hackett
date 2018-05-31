@@ -4,6 +4,7 @@
  sig->datum)
 
 (require
+ racket/list
  racket/pretty
  racket/syntax
  syntax/parse
@@ -42,10 +43,10 @@
     [(#%sig ids:hash-literal decls:hash-literal)
      #:do [(define mapping
              (make-immutable-free-id-table
-              (map cons (@ ids.values) (@ ids.keys))))
+              (map cons (@ ids.values) (map namespaced-symbol (@ ids.keys)))))
            (define decls*
-             (for/list ([(sym d) (in-hash (@ decls.value))])
-               (decl->datum sym (subst-ids mapping d))))]
+             (for/list ([(k d) (in-hash (@ decls.value))])
+               (decl->datum (namespaced-symbol k) (subst-ids mapping d))))]
      `(sig ,@decls*)]
 
     [(#%pi-sig ([x:id A]) B)
