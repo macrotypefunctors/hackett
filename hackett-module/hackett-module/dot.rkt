@@ -53,7 +53,7 @@
       #:with m- #'m.internal-id
       #:do [(define decl
               (hash-ref (sig-decls #'m.sig)
-                        (syntax-e #'x)
+                        (namespaced:value (syntax-e #'x))
                 #f))]
       #:fail-when (and (not (or (decl-val? decl)
                                 (decl-constructor? decl)))
@@ -75,7 +75,7 @@
      [(_ {~module m:module-binding} ~! x:id)
       #:do [(define decl
               (hash-ref (sig-decls #'m.sig)
-                        (syntax-e #'x)
+                        (namespaced:value (syntax-e #'x))
                 #f))]
       #:fail-when (and (not (decl-constructor? decl)) #'x)
       (format "not bound to a constructor in module ~a" (syntax-e #'m))
@@ -84,11 +84,11 @@
 
 (define-syntax-parser #%dot_τ
   [(_ {~module m:module-binding} ~! x:id)
-   #:do [(define sym (syntax-e #'x))
+   #:do [(define key (namespaced:type (syntax-e #'x)))
          (define internal-id
-           (hash-ref (sig-internal-ids #'m.sig) sym #f))
+           (hash-ref (sig-internal-ids #'m.sig) key #f))
          (define decl
-           (hash-ref (sig-decls #'m.sig) sym #f))]
+           (hash-ref (sig-decls #'m.sig) key #f))]
    #:fail-when (and (not (decl-type? decl)) #'x)
    (format "not bound to a type in module ~a" (syntax-e #'m))
    #:with {~var t_qual (type (@ m.expansion-ctx))} internal-id
