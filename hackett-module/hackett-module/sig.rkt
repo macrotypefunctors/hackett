@@ -9,7 +9,10 @@
 
 (require syntax/parse/define
          "rep/sig-literals.rkt"
-         hackett/private/type-language
+         (except-in hackett/private/type-language
+                    ~type
+                    type-namespace-introduce
+                    value-namespace-introduce)
          hackett/private/type-reqprov
          (only-in hackett/private/adt data-constructor-spec)
          (only-in hackett/base type data)
@@ -19,6 +22,7 @@
                      syntax/parse/experimental/template
                      hackett/private/util/stx
                      "rep/sig.rkt"
+                     "namespace/namespace.rkt"
                      "util/hash.rkt"
                      ))
 
@@ -64,7 +68,7 @@
   )
 
 (define-syntax-parser sig
-  [(_ ent ...)
+  [(_ {~value ent} ...)
    #:with entries:sig-entries ((make-syntax-introducer #t) #'[ent ...])
    (define keys (map syntax->datum (attribute entries.key)))
    #`(#%sig
@@ -73,11 +77,11 @@
 
 (define-syntax-parser Π
   #:datum-literals [:]
-  [(_ ([x : A:expr]) B:expr)
+  [(_ ([{~module x} : A:expr]) B:expr)
    #'(#%pi-sig ([x A]) B)])
 
 (define-simple-macro
-  (def-signature name sig-expr:sig)
+  (def-signature {~signature name} {~signature sig-expr:sig})
   (begin
     (define-values [] sig-expr.residual)
     (define-syntax name

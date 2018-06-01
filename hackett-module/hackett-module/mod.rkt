@@ -3,7 +3,10 @@
  "rep/sig-literals.rkt"
  racket/pretty
  syntax/parse/define
- hackett/private/type-language
+ (except-in hackett/private/type-language
+            ~type
+            type-namespace-introduce
+            value-namespace-introduce)
  (only-in hackett/private/adt
           data-constructor?
           data-constructor-arity
@@ -19,7 +22,8 @@
              syntax/kerncase
              syntax/id-set
              "rep/sig.rkt"
-             "check/expand-check.rkt"))
+             "check/expand-check.rkt"
+             "namespace/namespace.rkt"))
 
 (provide
  mod)
@@ -206,7 +210,7 @@
         #'defn)])])
 
 (define-syntax-parser mod
-  [(_ defn ...)
+  [(_ {~value defn} ...)
    ;; put the defns in a new scope
    #:with [defn* ...] ((make-syntax-introducer #true) #'[defn ...])
 
