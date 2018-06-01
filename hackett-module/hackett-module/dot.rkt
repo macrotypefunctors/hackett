@@ -6,7 +6,10 @@
 
 (require
  syntax/parse/define
- hackett/private/type-language
+ (except-in hackett/private/type-language
+            ~type
+            value-namespace-introduce
+            type-namespace-introduce)
  "rep/sig-literals.rkt"
  (prefix-in l: "link/mod.rkt")
  (for-syntax racket/base
@@ -20,6 +23,7 @@
              hackett/private/util/stx
              "prop-reintroducible-dot-type.rkt"
              "check/module-var.rkt"
+             "namespace/namespace.rkt"
              "util/stx-traverse.rkt"
              (for-syntax racket/base
                          racket/syntax
@@ -27,15 +31,6 @@
 
 (begin-for-syntax
   (define disappeared-use 'disappeared-use)
-
-  ;; puts it in the whichever namespace modules are in,
-  ;; which for now is the value namespace
-  (define-syntax ~module
-    (pattern-expander
-     (syntax-parser
-       [(_ pat)
-        #:with tmp (generate-temporary 'module-ns-tmp)
-        #'{~and tmp {~parse pat (value-namespace-introduce #'tmp)}}])))
 
   (struct proc+case-pat-exp [proc case-pat-trans]
     #:property prop:procedure (struct-field-index proc)
