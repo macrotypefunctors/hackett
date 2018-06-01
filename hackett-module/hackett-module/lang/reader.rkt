@@ -1,4 +1,4 @@
-#lang s-exp syntax/module-reader hackett-module/outside
+#lang s-exp syntax/module-reader hackett-module
 #:wrapper1 call-with-hackett-module-reading-parameterization
 #:module-wrapper module-wrapper-insert-type-require
 (require hackett-module/reader
