@@ -5,7 +5,6 @@
  "dot.rkt"
  racket/pretty
  syntax/parse/define
- hackett/private/type-language
  (prefix-in hkt: hackett/base)
  (prefix-in sig: "sig.rkt")
  (for-syntax racket/base
@@ -17,7 +16,8 @@
              "rep/sig.rkt"
              "rep/sig-pretty.rkt"
              "check/expand-check.rkt"
-             "check/module-var.rkt"))
+             "check/module-var.rkt"
+             "namespace/namespace.rkt"))
 
 (provide
  def-module
@@ -27,7 +27,7 @@
  appₘ)
 
 (define-syntax-parser def-module
-  [(_ name:id m:expr)
+  [(_ {~module name:id} {~module m:expr})
    #:with [m- sig] (sig⇒ #'m)
    #:with sig-str (sig->string #'sig 10)
 
@@ -47,7 +47,7 @@
 
 (define-syntax-parser seal
   #:datum-literals [:>]
-  [(_ m:expr :> s:sig)
+  [(_ m:expr :> {~signature s:sig})
    #:with m- (sig⇐ #'m #'s.expansion)
    (attach-sig #'(let-values ([() s.residual])
                    m-)
@@ -57,7 +57,7 @@
 
 (define-syntax-parser λₘ
   #:datum-literals [:]
-  [(_ ([x:id : A:sig]) body:expr)
+  [(_ ([x:id : {~signature A:sig}]) body:expr)
    #:with x- (generate-temporary #'x)
 
    ;; ===========
