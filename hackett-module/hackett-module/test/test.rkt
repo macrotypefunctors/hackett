@@ -5,7 +5,7 @@
          hackett/private/type-reqprov
          (only-in (unmangle-types-in hackett/private/kernel) ∀ -> #%app)
          (only-in hackett/private/base Integer)
-         (only-in (unmangle-types-in hackett-module/outside) #%dot)
+         (only-in (unmangle-types-in hackett-module) #%dot)
          "../sig.rkt"
          "../dot.rkt"
          "../rep/sig-literals.rkt"

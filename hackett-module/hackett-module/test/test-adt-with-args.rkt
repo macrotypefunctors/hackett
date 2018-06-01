@@ -1,4 +1,4 @@
-#lang hackett-module/outside
+#lang hackett-module
 (require hackett/private/test)
 
 (def-module M

@@ -1,4 +1,4 @@
-#lang hackett-module/outside
+#lang hackett-module
 
 (def-signature A (sig (type X) (val x : X) (val f : (-> X Integer))))
 
