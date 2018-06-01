@@ -1,4 +1,4 @@
-#lang hackett-module/outside
+#lang hackett-module
 
 (require hackett/private/test)
 
@@ -42,7 +42,7 @@
       (sig
        ;; equality
        (val = : {N.Nat -> N.Nat -> B.Boool})
-     
+
        ;; arithmetic
        (val + : {N.Nat -> N.Nat -> N.Nat})))))
 
@@ -91,7 +91,7 @@
         (def sub1 : (-> Nat Nat) (λ (x) (- x 1))))
    :>
    (where NAT-REP Boool = Bool-Rep.Boool)))
-    
+
 (def-module Nat/Int
   (appₘ (appₘ Nat Bool-Rep) Nat-Rep/Int))
 

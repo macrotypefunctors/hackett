@@ -1,4 +1,4 @@
-#lang hackett-module/outside
+#lang hackett-module
 
 (def-signature F
   (Π ([M : (sig (type T))])

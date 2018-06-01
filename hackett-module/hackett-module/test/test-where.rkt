@@ -1,4 +1,4 @@
-#lang hackett-module/outside
+#lang hackett-module
 
 (def-signature A (sig (type X) (val x : X) (val f : (-> X Integer))))
 (def-signature B (sig (type X) (type Y) (val y : Y) (val f : (-> Y X))))
@@ -35,5 +35,3 @@
 
 
 (def-module C* (seal (appₘ (appₘ C*/AB A*) B*) :> C))
-
-
