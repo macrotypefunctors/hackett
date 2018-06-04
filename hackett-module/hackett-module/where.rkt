@@ -1,9 +1,10 @@
 #lang racket/base
 
-(provide where)
+(provide (signature-out where))
 
 (require syntax/parse/define
          hackett/private/type-language
+         "namespace/reqprov.rkt"
          (for-syntax racket/base
                      "rep/sig.rkt"))
 

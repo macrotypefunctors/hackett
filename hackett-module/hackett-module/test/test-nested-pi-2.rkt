@@ -4,8 +4,8 @@
 
 (def-module F
   (seal
-   (λₘ ([dummy : (sig)])       ; removing this dummy layer here
-     (λₘ ([M : (sig (type T))])
+   (λ ([dummy : (sig)])       ; removing this dummy layer here
+     (λ ([M : (sig (type T))])
        (mod (type U M.T))))
    :>
    (Π ([dummy : (sig)])        ; and this dummy layer here gets rid of the error
@@ -15,8 +15,8 @@
 
 (def-module G
   (seal
-   (λₘ ([dummy : (sig)])  ; removing this dummy layer here
-     (λₘ ([M : S])
+   (λ ([dummy : (sig)])  ; removing this dummy layer here
+     (λ ([M : S])
        (mod
         (def v : M.X M.x))))
    :>

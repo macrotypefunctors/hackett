@@ -3,9 +3,12 @@
 (provide unmangle-in
          type-out
          module-out
-         signature-out)
+         signature-out
+         require/unmangle
+         #%require/unmangle-only)
 
-(require (for-syntax racket/base
+(require syntax/parse/define
+         (for-syntax racket/base
                      "namespace.rkt"
                      "mangle/mangle-identifier.rkt"
                      "mangle/mangle-reqprov.rkt"))
@@ -40,4 +43,10 @@
 
 (define-syntax signature-out
   (make-mangling-provide-transformer mangle-signature))
+
+(define-simple-macro (require/unmangle stuff:expr ...)
+  (require (unmangle-in stuff ...)))
+
+(define-simple-macro (#%require/unmangle-only stuff:expr ...)
+  (require (unmangle-in #:only stuff ...)))
 

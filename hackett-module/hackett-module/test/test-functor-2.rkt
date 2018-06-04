@@ -10,7 +10,7 @@
         A))
 
 (def-module F
-  (λₘ ([M : A])
+  (λ ([M : A])
     (seal
      (mod (type X M.X)
           (type Y (-> Integer X))
@@ -19,14 +19,14 @@
      :>
      (sig (type X = M.X) (type Y) (val y : Y) (val f : (-> Y X))))))
 
-(def-module N (appₘ F M))
+(def-module N (F M))
 
 ;; -------------------------------------
 
 ;; the M55 in the error message comes from this functor:
 (def-module G
-  (λₘ ([M : A])
-    (λₘ ([N : (sig (type X = M.X) (type Y) (val y : Y) (val f : (-> Y X)))])
+  (λ ([M : A])
+    (λ ([N : (sig (type X = M.X) (type Y) (val y : Y) (val f : (-> Y X)))])
       (seal
        (mod (type X M.X)
             (def ffy : Integer (M.f (N.f N.y))))
@@ -34,18 +34,18 @@
        (sig (type X = M.X) (val ffy : Integer))))))
 
 
-(def-module O (appₘ (appₘ G M) N))
+(def-module O ((G M) N))
 
 ; -------------------
 
 (def-module H
-  (λₘ ([A : (sig (type X))])
-    (λₘ ([B : (sig (type X = A.X))])
+  (λ ([A : (sig (type X))])
+    (λ ([B : (sig (type X = A.X))])
       (mod
         (type Y B.X)))))
 
 
-(def-module H-M (appₘ H M))
+(def-module H-M (H M))
 
 ;; should infer:
 ;;   (Π ([B- (sig (type X = opaque:M.X-))]) (sig))

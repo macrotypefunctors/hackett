@@ -2,7 +2,7 @@
 (require hackett/private/test)
 
 (def-module F
-  (λₘ ([M : (sig (data B T F))])
+  (λ ([M : (sig (data B T F))])
     (mod
      (def f
        (λ (x)
@@ -15,15 +15,15 @@
    (data B T F)))
 
 (def-module FD
-  (appₘ F D))
+  (F D))
 
 (def-module F*
   ; eta-expand F
-  (λₘ ([Q : (sig (data B T F))])
-    (appₘ F Q)))
+  (λ ([Q : (sig (data B T F))])
+    (F Q)))
 
 (def-module F*D
-  (appₘ F* D))
+  (F* D))
 
 (test {(FD.f D.T) ==! 1})
 (test {(FD.f D.F) ==! 0})

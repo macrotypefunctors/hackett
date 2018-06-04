@@ -1,7 +1,7 @@
 #lang racket/base
 
-(provide sig
-         Π
+(provide (signature-out sig
+                        Π)
          val
          type
          data
@@ -9,6 +9,7 @@
 
 (require syntax/parse/define
          "rep/sig-literals.rkt"
+         "namespace/reqprov.rkt"
          (except-in hackett/private/type-language
                     ~type
                     type-namespace-introduce
