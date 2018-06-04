@@ -1,6 +1,7 @@
 #lang racket/base
 (require
  "rep/sig-literals.rkt"
+ "namespace/reqprov.rkt"
  racket/pretty
  syntax/parse/define
  (except-in hackett/private/type-language
@@ -13,7 +14,7 @@
           data-constructor-make-match-pat
           data-constructor-spec)
  (prefix-in hkt: hackett/base)
- (prefix-in sig: "sig.rkt")
+ (prefix-in sig: (unmangle-in #:no-introduce "sig.rkt"))
  (prefix-in l: "link/mod.rkt")
  (for-syntax racket/base
              racket/match
@@ -26,7 +27,7 @@
              "namespace/namespace.rkt"))
 
 (provide
- mod)
+ (module-out mod))
 
 (begin-for-syntax
   (define disappeared-binding 'disappeared-binding)

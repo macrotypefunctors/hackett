@@ -1,7 +1,7 @@
 #lang racket/base
 (provide
- #%dot_τ
- #%dot_e
+ (rename-out [#%dot_e #%dot])
+ (type-out (rename-out [#%dot_τ #%dot]))
  (for-syntax reintroduce-#%dot))
 
 (require
@@ -11,6 +11,7 @@
             value-namespace-introduce
             type-namespace-introduce)
  "rep/sig-literals.rkt"
+ "namespace/reqprov.rkt"
  (prefix-in l: "link/mod.rkt")
  (for-syntax racket/base
              racket/match

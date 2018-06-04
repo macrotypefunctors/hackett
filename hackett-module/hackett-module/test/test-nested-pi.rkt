@@ -7,6 +7,6 @@
 
 
 (def-module G
-  (λₘ ([M : (sig (type T))])
+  (λ ([M : (sig (type T))])
     (mod
       (type U M.T))))

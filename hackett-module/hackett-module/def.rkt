@@ -3,6 +3,7 @@
  "rep/sig-literals.rkt"
  "mod.rkt"
  "dot.rkt"
+ "namespace/reqprov.rkt"
  racket/pretty
  syntax/parse/define
  (prefix-in hkt: hackett/base)
@@ -21,10 +22,10 @@
 
 (provide
  def-module
- seal
- λₑ
- λₘ
- appₘ)
+ (module-out seal
+             (rename-out
+              [λₘ λ]
+              [appₘ #%app])))
 
 (define-syntax-parser def-module
   [(_ {~module name:id} {~module m:expr})
@@ -52,8 +53,6 @@
    (attach-sig #'(let-values ([() s.residual])
                    m-)
                #'s.expansion)])
-
-(define-syntax λₑ (make-rename-transformer #'hkt:λ))
 
 (define-syntax-parser λₘ
   #:datum-literals [:]

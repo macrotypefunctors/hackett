@@ -6,8 +6,8 @@
        (val f : (-> In Out))))
 
 (def-module Thrush
-  (λₘ ([A : TRANS])
-    (λₘ ([B : (where TRANS In = A.Out)])
+  (λ ([A : TRANS])
+    (λ ([B : (where TRANS In = A.Out)])
       (mod
        (type In A.In)
        (type Out B.Out)
@@ -24,5 +24,5 @@
        (type Out {Integer -> Integer -> Integer})
        (def f : {In -> Out} (λ (b) (λ (t f) (if b t f))))))
 
-(def-module EvenLambool (appₘ (appₘ Thrush Even) Lambool))
+(def-module EvenLambool ((Thrush Even) Lambool))
 

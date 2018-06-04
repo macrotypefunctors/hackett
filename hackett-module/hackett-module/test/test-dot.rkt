@@ -10,10 +10,10 @@
 
 
 (def-module F
-  (λₘ ([A : (sig (type X)
-                 (val simple : X))])
+  (λ ([A : (sig (type X)
+                (val simple : X))])
     A))
 
-(def-module M-sealed (appₘ F M))
+(def-module M-sealed (F M))
 
 (def x-sealed M-sealed.simple)

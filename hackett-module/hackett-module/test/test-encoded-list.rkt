@@ -22,7 +22,7 @@
        (val rest : {T -> T})))
 
 (def-module TestPair
-  (λₘ ([L : LIST])
+  (λ ([L : LIST])
     (mod (def list1 : L.T (L.cons 2 L.empty))
          (def list2 : L.T (L.cons 1 list1))
          (def l==!
@@ -63,7 +63,7 @@
                      0))))
    :> LIST))
 
-(def-module TestPrimeExpt (appₘ TestPair PrimeExpt))
+(def-module TestPrimeExpt (TestPair PrimeExpt))
 
 (test TestPrimeExpt.test)
 
