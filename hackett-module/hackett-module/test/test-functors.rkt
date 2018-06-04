@@ -16,14 +16,14 @@
        (def z {x + 1})))
 
 (def-module Reorder
-  (λₘ ([N : NUMBERS])
+  (λ ([N : NUMBERS])
     (mod
       (def x (: "im not an int" String))
       (def y N.x)
       (def z N.z))))
 
 (def-module Numbers+
-  (appₘ Reorder Numbers))
+  (Reorder Numbers))
 
 ;; ======================
 
@@ -33,7 +33,7 @@
     (type U)))
 
 (def-module ReorderTypes
-  (λₘ ([M : TYPES])
+  (λ ([M : TYPES])
     (mod
       (type T M.U)
       (type U M.T))))

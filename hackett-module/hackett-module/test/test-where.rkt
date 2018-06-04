@@ -12,7 +12,7 @@
         A))
 
 (def-module B*/A
-  (λₘ ([A : A])
+  (λ ([A : A])
     (seal
      (mod (type X A.X)
           (type Y (-> Integer X))
@@ -21,12 +21,12 @@
      :>
      (where B X = A.X))))
 
-(def-module B* (appₘ B*/A A*))  ; (where B X = A*.X)
+(def-module B* (B*/A A*))  ; (where B X = A*.X)
 
 
 (def-module C*/AB
-  (λₘ ([A : A])
-    (λₘ ([B : (where B X = A.X)])
+  (λ ([A : A])
+    (λ ([B : (where B X = A.X)])
       (seal
        (mod (type X A.X)
             (def ffy : Integer (A.f (B.f B.y))))
@@ -34,4 +34,4 @@
        (where C X = A.X)))))
 
 
-(def-module C* (seal (appₘ (appₘ C*/AB A*) B*) :> C))
+(def-module C* (seal ((C*/AB A*) B*) :> C))

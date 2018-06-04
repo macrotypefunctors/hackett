@@ -13,8 +13,11 @@
  (only-in hackett/private/typecheck type->string type-literals)
  "../util/stx.rkt"
  "../util/stx-traverse.rkt"
+ "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
-               (only-in "../dot.rkt" #%dot_τ)))
+               (only-in (unmangle-in #:only "../dot.rkt")
+                        [#%dot #%dot_τ])))
+
 
 ;; Sig -> String
 ;; Sig Int -> String

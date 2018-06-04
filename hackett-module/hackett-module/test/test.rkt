@@ -2,12 +2,11 @@
 
 (require syntax/parse/define
          syntax/macro-testing
-         hackett/private/type-reqprov
-         (only-in (unmangle-types-in hackett/private/kernel) ∀ -> #%app)
+         "../namespace/reqprov.rkt"
+         (only-in (unmangle-in hackett/private/kernel) ∀ -> #%app)
          (only-in hackett/private/base Integer)
-         (only-in (unmangle-types-in hackett-module) #%dot)
-         "../sig.rkt"
-         "../dot.rkt"
+         (unmangle-in #:no-introduce "../sig.rkt")
+         (unmangle-in "../dot.rkt")
          "../rep/sig-literals.rkt"
          (for-syntax racket/base
                      rackunit
@@ -100,23 +99,23 @@
     (check-sig-matches #'J* #'J)
 
     (check-sig-matches
-     (pi ([x : I]) (sig (val v : (#%dot_τ x t))))
-     (pi ([x : I*]) (sig (val v : (#%dot_τ x t)))))
+     (pi ([x : I]) (sig (val v : (#%dot x t))))
+     (pi ([x : I*]) (sig (val v : (#%dot x t)))))
 
     (check-sig-matches
-     (pi ([x : I]) (sig (val v : (#%dot_τ x t))))
+     (pi ([x : I]) (sig (val v : (#%dot x t))))
      (pi ([x : I*]) (sig (val v : Integer))))
 
     (check-sig-matches
-     (pi ([x : J]) (sig (val v : (#%dot_τ x t))))
-     (pi ([x : J*]) (sig (val v : (#%dot_τ x t)))))
+     (pi ([x : J]) (sig (val v : (#%dot x t))))
+     (pi ([x : J*]) (sig (val v : (#%dot x t)))))
 
     (check-sig-matches
-     (pi ([x : J]) (sig (val v : (#%dot_τ x t))))
-     (pi ([x : J*]) (sig (val v : (#%dot_τ x s)))))
+     (pi ([x : J]) (sig (val v : (#%dot x t))))
+     (pi ([x : J*]) (sig (val v : (#%dot x s)))))
 
     (check-not-sig-matches
-     (pi ([x : J]) (sig (val v : (#%dot_τ x t))))
+     (pi ([x : J]) (sig (val v : (#%dot x t))))
      (pi ([x : J]) (sig (val v : Integer)))))
 
   (check-sig-matches

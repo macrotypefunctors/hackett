@@ -59,8 +59,8 @@
 
 (def-module Nat
   (seal
-   (λₘ ([B : BOOL-REP])
-     (λₘ ([N : (where NAT-REP Boool = B.Boool)])
+   (λ ([B : BOOL-REP])
+     (λ ([N : (where NAT-REP Boool = B.Boool)])
        (mod
         ;; comparison
         (def = : {N.Nat -> N.Nat -> B.Boool}
@@ -93,12 +93,12 @@
    (where NAT-REP Boool = Bool-Rep.Boool)))
 
 (def-module Nat/Int
-  (appₘ (appₘ Nat Bool-Rep) Nat-Rep/Int))
+  ((Nat Bool-Rep) Nat-Rep/Int))
 
 (def-module TestNat
-  (λₘ ([NR : (where NAT-REP Boool = Bool-Rep.Boool)])
+  (λ ([NR : (where NAT-REP Boool = Bool-Rep.Boool)])
     (mod
-     (def-module N (appₘ (appₘ Nat Bool-Rep) NR))
+     (def-module N ((Nat Bool-Rep) NR))
      (type Boool Bool-Rep.Boool)
      (type Nat NR.Nat)
      (def true : Boool Bool-Rep.true)
@@ -120,6 +120,6 @@
                          False)))))
 
 (def-module TestNat/Int
-  (appₘ TestNat Nat-Rep/Int))
+  (TestNat Nat-Rep/Int))
 
 (test {TestNat/Int.should-be-true ==! True})
