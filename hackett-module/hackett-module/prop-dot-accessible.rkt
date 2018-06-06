@@ -7,9 +7,13 @@
  prop:dot-accessible/pattern dot-accessible/pattern dot-accessible/pattern?
  prop:dot-accessible/type    dot-accessible/type    dot-accessible/type?
  prop:dot-accessible         dot-accessible         #| no predicate |#
+ ;; ----------------
+ dot-accessible-id/type
  )
 
-(require struct-like-struct-type-property)
+(require struct-like-struct-type-property
+         syntax/parse
+         syntax/parse/class/local-value)
 
 ;; internal-id : Id
 ;; this is the id that `reintroduce-#%dot` uses to compare
@@ -43,4 +47,11 @@
   (λ (self) (dot-accessible/pattern (dot-accessible-pattern-key->id self)))
   #:property prop:dot-accessible/type
   (λ (self) (dot-accessible/type (dot-accessible-type-key->id self))))
+
+;; ---------------------------------------------------------
+
+(define-syntax-class dot-accessible-id/type
+  #:attributes [key->id]
+  [pattern {~var id (local-value dot-accessible/type?)}
+    #:attr key->id (dot-accessible/type-key->id (attribute id.local-value))])
 
