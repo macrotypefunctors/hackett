@@ -32,6 +32,8 @@
   (define-simple-macro (sig stuff |...|) (expand-sig #`(sig stuff |...|)))
   (define-simple-macro (pi stuff |...|) (expand-sig #`(Π stuff |...|)))
 
+  (error-print-width 1000)
+
   (test-case "S"
     (define S
       (expand-sig
