@@ -20,6 +20,7 @@
          hackett/private/typecheck
          "../util/stx.rkt"
          "../util/stx-traverse.rkt"
+         "../util/stx-subst.rkt"
          "../util/hash.rkt"
          "../check/module-var.rkt"
          "../prop-dot-accessible.rkt"
@@ -86,22 +87,8 @@
 
 ;; ---------------------------------------------
 
-;; Signature [FreeIdTbl Id] -> SignatureStx
-;; note: result is stx, aka. unexpanded
-(define (signature-substs s mapping)
-  (let traverse ([stx s])
-    (syntax-parse stx
-      [:id
-       (free-id-table-ref mapping stx stx)]
-      [_
-       (traverse-stx/recur stx traverse)])))
-
-;; Signature Id Id -> Signature
-(define (signature-subst s x-old x-new)
-  (define mapping
-    (make-immutable-free-id-table
-     (list (cons x-old x-new))))
-  (signature-substs s mapping))
+(define signature-subst stx-subst)
+(define signature-substs stx-substs)
 
 ;; ---------------------------------------------
 
