@@ -130,6 +130,11 @@
      (hash-zip alias-type-keys alias-type-ids)
      (hash-zip opaque-type-keys opaque-type-ids)
      (hash-zip data-type-keys data-type-ids)))
+  (define (tec-bind-syntax-bindings bs)
+    (syntax-local-bind-syntaxes
+     (map first bs)
+     #`(values #,@(map second bs))
+     type-expansion-ctx))
 
   ;; generate aliases for alias types
 
@@ -141,10 +146,7 @@
       (list id
             #'(make-variable-like-transformer (quote-syntax t)))))
 
-  (syntax-local-bind-syntaxes
-   (map first alias-type-bindings)
-   #`(values #,@(map second alias-type-bindings))
-   type-expansion-ctx)
+  (tec-bind-syntax-bindings alias-type-bindings)
 
   (define/syntax-parse [alias-key ...] alias-type-keys)
   (define/syntax-parse [alias-id ...] alias-type-ids)
