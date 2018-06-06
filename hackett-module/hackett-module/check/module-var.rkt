@@ -29,12 +29,14 @@
 
 ;; internal-id : Id
 ;; signature : Signature
-;; opaque-type-ids : [Hash Symbol Id]
-;; data-type-ids : [Hash Symbol Id]
-;; constructor-ids : [Hash Symbol Id]
+;; alias-type-ids : [Hash Key Id]
+;; opaque-type-ids : [Hash Key Id]
+;; data-type-ids : [Hash Key Id]
+;; constructor-ids : [Hash Key Id]
 (struct module-var-transformer
   [internal-id
    signature
+   alias-type-ids
    opaque-type-ids
    data-type-ids
    value-ids
@@ -50,12 +52,13 @@
      stx))
   #:property prop:dot-accessible
   (λ (self)
-    (match-define (module-var-transformer id _ ho hd hv hp hm) self)
+    (match-define (module-var-transformer id _ ha ho hd hv hp hm) self)
     (dot-accessible
      id
      (λ (val-key) (hash-ref hv val-key #f))
      (λ (pat-key) (hash-ref hp pat-key #f))
-     (λ (type-key) (or (hash-ref ho type-key #f)
+     (λ (type-key) (or (hash-ref ha type-key #f)
+                       (hash-ref ho type-key #f)
                        (hash-ref hd type-key #f))))))
 
 (struct opaque-type-constructor
@@ -82,13 +85,19 @@
 ;;         [Listof [List Id Stx]]]               ; value binding
 (define (generate-module-var-bindings name internal-id s)
 
+  (define-values [s-internal-ids s-decls]
+    (syntax-parse s
+      #:literal-sets [sig-literals]
+      [(#%pi-sig . _) (values (hash) (hash))]
+      [(#%sig . _) (values (sig-internal-ids s) (sig-decls s))]))
+
   (match-define
     (list opaque-type-keys data-type-keys alias-type-keys
           constructor-keys value-keys)
     (partition-decl-keys
      (list decl-type-opaque? decl-type-data? decl-type-alias?
            decl-constructor? decl-val?)
-     s))
+     s-decls))
 
   (define opaque-type-ids
     (generate-prefixed-temporaries (format-symbol "opaque:~a." name)
@@ -97,6 +106,9 @@
   (define data-type-ids
     (generate-prefixed-temporaries (format-symbol "data:~a." name)
                                    data-type-keys))
+
+  (define alias-type-ids
+    (generate-temporaries alias-type-keys))
 
   (define constructor-ids
     (generate-prefixed-temporaries (format-symbol "ctor:~a." name)
@@ -113,10 +125,30 @@
   ;; make intdef context for expanding types
 
   (define type-expansion-ctx
-    (module-make-type-expansion-context
-     s
+    (make-type-expansion-context
+     s-internal-ids
+     (hash-zip alias-type-keys alias-type-ids)
      (hash-zip opaque-type-keys opaque-type-ids)
      (hash-zip data-type-keys data-type-ids)))
+
+  ;; generate aliases for alias types
+
+  (define alias-type-bindings
+    (for/list ([key (in-list alias-type-keys)]
+               [id (in-list alias-type-ids)])
+      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} t))
+        (hash-ref s-decls key))
+      (list id
+            #'(make-variable-like-transformer (quote-syntax t)))))
+
+  (syntax-local-bind-syntaxes
+   (map first alias-type-bindings)
+   #`(values #,@(map second alias-type-bindings))
+   type-expansion-ctx)
+
+  (define/syntax-parse [alias-key ...] alias-type-keys)
+  (define/syntax-parse [alias-id ...] alias-type-ids)
+  (define/syntax-parse [[alias-key/id ...] ...] #'[['alias-key (quote-syntax alias-id)] ...])
 
   ;; generate #%type:con's for opaque types
 
@@ -221,6 +253,7 @@
           #`(module-var-transformer
              (quote-syntax #,internal-id)
              (quote-syntax #,s)
+             (hash alias-key/id ... ...)       ; alias types
              (hash op-key/id ... ...)          ; opaque types
              (hash data-key/id ... ...)        ; data types
              (hash ctor-key/id ... ... val-key/id ... ...) ; values
@@ -231,7 +264,8 @@
 
   (define all-syntax-bindings
     (cons module-binding
-          (append opaque-type-bindings
+          (append alias-type-bindings
+                  opaque-type-bindings
                   data-type-bindings
                   constructor-bindings)))
 
@@ -264,53 +298,42 @@
     (list (internal-definition-context-introduce intdef-ctx (first id/expr))
           (internal-definition-context-introduce intdef-ctx (second id/expr)))))
 
-;; Signature [Hash Key Id] [Hash Key Id] -> IntDefCtx
-(define (module-make-type-expansion-context sig opaque-key->id data-key->id)
-  (syntax-parse sig
-    #:literal-sets [sig-literals]
-    [(#%sig internal-ids:hash-literal
-            decls:hash-literal)
-     (define intdef-ctx
-       (syntax-local-make-definition-context))
+;; [Hash Key Id] [Hash Key Id] [Hash Key Id] [Hash Key Id] -> IntDefCtx
+(define (make-type-expansion-context internal-ids
+                                            alias-key->id
+                                            opaque-key->id
+                                            data-key->id)
+  (define intdef-ctx
+    (syntax-local-make-definition-context))
 
-     ;; create type transformers for #%type-decl:
-     ;;  - #%alias maps to the rhs
-     ;;  - #%opaque maps to (#%type:con <opaque-id>)
+  ;; assume:
+  ;;   each rhs of each hash-table either is already or will soon be
+  ;;   bound in the intdef-ctx created here
+  ;; create:
+  ;;   transformers expanding to those ids in the rhs
 
-     (for ([(key decl) (in-hash (@ decls.value))])
-       (define internal-id (hash-ref (@ internal-ids.value) key))
-       (syntax-parse decl
-         #:literal-sets [sig-literals]
+  (for ([(key alias-id) (in-hash alias-key->id)])
+    (define internal-id (hash-ref internal-ids key))
+    (syntax-local-bind-syntaxes
+     (list internal-id)
+     #`(make-variable-like-transformer (quote-syntax #,alias-id))
+     intdef-ctx))
 
-         [(#%type-decl (#%alias rhs))
-          (syntax-local-bind-syntaxes
-           (list internal-id)
-           #'(make-variable-like-transformer
-              (quote-syntax rhs))
-           intdef-ctx)]
+  (for ([(key opaque-id) (in-hash opaque-key->id)])
+    (define internal-id (hash-ref internal-ids key))
+    (syntax-local-bind-syntaxes
+     (list internal-id)
+     #`(make-variable-like-transformer (quote-syntax (#%type:con #,opaque-id)))
+     intdef-ctx))
 
-         [(#%type-decl (#%opaque))
-          #:with type-con-id (hash-ref opaque-key->id key)
-          (syntax-local-bind-syntaxes
-           (list internal-id)
-           #'(make-variable-like-transformer
-              (quote-syntax (#%type:con type-con-id)))
-           intdef-ctx)]
+  (for ([(key data-id) (in-hash data-key->id)])
+    (define internal-id (hash-ref internal-ids key))
+    (syntax-local-bind-syntaxes
+     (list internal-id)
+     #`(make-variable-like-transformer (quote-syntax (#%type:con #,data-id)))
+     intdef-ctx))
 
-         [(#%type-decl (#%data . _))
-          #:with type-con-id (hash-ref data-key->id key)
-          (syntax-local-bind-syntaxes
-           (list internal-id)
-           #'(make-variable-like-transformer
-              (quote-syntax (#%type:con type-con-id)))
-           intdef-ctx)]
-
-         [_ (void)]))
-
-     intdef-ctx]
-
-    [(#%pi-sig . _)
-     (syntax-local-make-definition-context)]))
+  intdef-ctx)
 
 
 (define-syntax-class module-binding
@@ -320,6 +343,7 @@
            #:attr value (@ m.local-value)
            #:do [(match-define (module-var-transformer x-
                                                        s
+                                                       ali-key->id
                                                        op-key->id
                                                        data-key->id
                                                        val-key->id
@@ -328,13 +352,15 @@
                    (@ value))]
            #:with internal-id (syntax-local-introduce x-)
            #:attr sig (syntax-local-introduce s)
+           #:attr alias-ids ali-key->id
            #:attr opaque-ids op-key->id
            #:attr data-ids data-key->id
            #:attr value-ids val-key->id
            #:attr pattern-ids pat-key->id
            #:attr submod-ids submod-key->id
            #:attr expansion-ctx
-           (module-make-type-expansion-context (@ sig)
+           (make-type-expansion-context (sig-internal-ids (@ sig))
+                                               (@ alias-ids)
                                                (@ opaque-ids)
                                                (@ data-ids)
                                                ; TOOD: submod-ids?
@@ -342,18 +368,14 @@
 
 ;; ---------------------------------------------------------
 
-;; [Listof [Decl -> Bool]] Signature -> [Listof [Listof Key]]
-(define (partition-decl-keys decl-predicates s)
-  (syntax-parse s
-    #:literal-sets [sig-literals]
-    [(#%pi-sig . _) (map (λ (x) '()) decl-predicates)]
-    [(#%sig . _)
-     (define key-decl-predicates
-       (for/list ([decl-predicate (in-list decl-predicates)])
-         (λ (k d) (decl-predicate d))))
-     (map
-      hash-keys
-      (partition*/hash key-decl-predicates (sig-decls s)))]))
+;; [Listof [Decl -> Bool]] [Hashof Key Decl] -> [Listof [Listof Key]]
+(define (partition-decl-keys decl-predicates decls)
+  (define key-decl-predicates
+    (for/list ([decl-predicate (in-list decl-predicates)])
+      (λ (k d) (decl-predicate d))))
+  (map
+   hash-keys
+   (partition*/hash key-decl-predicates decls)))
 
 ;; SymStr [Listof Key] -> [Listof Id]
 (define (generate-prefixed-temporaries prefix keys)
