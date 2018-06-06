@@ -8,6 +8,8 @@
  prop:dot-accessible/type    dot-accessible/type    dot-accessible/type?
  prop:dot-accessible         dot-accessible         #| no predicate |#
  ;; ----------------
+ dot-accessible-id/value
+ dot-accessible-id/pattern
  dot-accessible-id/type
  )
 
@@ -49,6 +51,16 @@
   (λ (self) (dot-accessible/type (dot-accessible-type-key->id self))))
 
 ;; ---------------------------------------------------------
+
+(define-syntax-class dot-accessible-id/value
+  #:attributes [key->id]
+  [pattern {~var id (local-value dot-accessible/value?)}
+    #:attr key->id (dot-accessible/value-key->id (attribute id.local-value))])
+
+(define-syntax-class dot-accessible-id/pattern
+  #:attributes [key->id]
+  [pattern {~var id (local-value dot-accessible/pattern?)}
+    #:attr key->id (dot-accessible/pattern-key->id (attribute id.local-value))])
 
 (define-syntax-class dot-accessible-id/type
   #:attributes [key->id]
