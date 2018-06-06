@@ -18,6 +18,7 @@
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
  "../util/hash.rkt"
+ "../util/partition.rkt"
  (for-template "../rep/sig-literals.rkt"
                (only-in racket/base #%app quote)
                (prefix-in l: "../link/mod.rkt"))
@@ -81,22 +82,21 @@
 ;;         [Listof [List Id Stx]]]               ; value binding
 (define (generate-module-var-bindings name internal-id s)
 
-  (define opaque-type-keys
-    (matching-decl-keys s decl-type-opaque?))
+  (match-define
+    (list opaque-type-keys data-type-keys alias-type-keys
+          constructor-keys value-keys)
+    (partition-decl-keys
+     (list decl-type-opaque? decl-type-data? decl-type-alias?
+           decl-constructor? decl-val?)
+     s))
 
   (define opaque-type-ids
     (generate-prefixed-temporaries (format-symbol "opaque:~a." name)
                                    opaque-type-keys))
 
-  (define data-type-keys
-    (matching-decl-keys s decl-type-data?))
-
   (define data-type-ids
     (generate-prefixed-temporaries (format-symbol "data:~a." name)
                                    data-type-keys))
-
-  (define constructor-keys
-    (matching-decl-keys s decl-constructor?))
 
   (define constructor-ids
     (generate-prefixed-temporaries (format-symbol "ctor:~a." name)
@@ -107,9 +107,6 @@
 
   (define constructor-key->id
     (hash-zip constructor-keys constructor-ids))
-
-  (define value-keys
-    (matching-decl-keys s decl-val?))
 
   (define value-ids (generate-temporaries value-keys))
 
@@ -345,15 +342,18 @@
 
 ;; ---------------------------------------------------------
 
-;; Signature [Decl -> Bool] -> [Listof Key]
-(define (matching-decl-keys s decl-matches?)
+;; [Listof [Decl -> Bool]] Signature -> [Listof [Listof Key]]
+(define (partition-decl-keys decl-predicates s)
   (syntax-parse s
     #:literal-sets [sig-literals]
-    [(#%pi-sig . _) '()]
+    [(#%pi-sig . _) (map (λ (x) '()) decl-predicates)]
     [(#%sig . _)
-     (for/list ([(key decl) (in-hash (sig-decls s))]
-                #:when (decl-matches? decl))
-       key)]))
+     (define key-decl-predicates
+       (for/list ([decl-predicate (in-list decl-predicates)])
+         (λ (k d) (decl-predicate d))))
+     (map
+      hash-keys
+      (partition*/hash key-decl-predicates (sig-decls s)))]))
 
 ;; SymStr [Listof Key] -> [Listof Id]
 (define (generate-prefixed-temporaries prefix keys)

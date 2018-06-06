@@ -23,6 +23,7 @@
                      decl-type?
                      decl-type-opaque?
                      decl-type-data?
+                     decl-type-alias?
                      decl-val?
                      decl-constructor?
                      decl-module?))
@@ -130,6 +131,13 @@
     (syntax-parse d
       #:literal-sets [sig-literals]
       [(#%type-decl (#%data . _)) #t]
+      [_ #f]))
+
+  ;; Decl -> Bool
+  (define (decl-type-alias? d)
+    (syntax-parse d
+      #:literal-sets [sig-literals]
+      [(#%type-decl (#%alias . _)) #t]
       [_ #f]))
 
   ;; Decl -> Bool
