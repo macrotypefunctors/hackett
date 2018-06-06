@@ -23,6 +23,8 @@
                (only-in racket/base #%app quote)
                (prefix-in l: "../link/mod.rkt"))
  (for-template hackett/private/type-language
+               (only-in hackett/private/base
+                        make-typed-var-transformer)
                (only-in hackett/private/adt
                         data-constructor
                         [type-constructor data-type-constructor])))
@@ -120,7 +122,12 @@
   (define constructor-key->id
     (hash-zip constructor-keys constructor-ids))
 
-  (define value-ids (generate-temporaries value-keys))
+  (define typed-value-ids
+    (generate-prefixed-temporaries (format-symbol "typed:~a." name)
+                                   value-keys))
+  (define untyped-value-ids
+    (generate-prefixed-temporaries (format-symbol "untyped:~a." name)
+                                   value-keys))
 
   ;; make intdef context for expanding types
 
@@ -239,13 +246,24 @@
 
   ;; generate mod-value-ref expressions for values
 
-  (define value-bindings
+  (define typed-value-bindings
     (for/list ([key (in-list value-keys)]
-               [id (in-list value-ids)])
+               [id (in-list typed-value-ids)]
+               [un (in-list untyped-value-ids)])
+      (define/syntax-parse ({~literal #%val-decl}
+                            {~var t (type type-expansion-ctx)})
+        (hash-ref s-decls key))
+      (list id
+            #`(make-typed-var-transformer (quote-syntax #,un)
+                                          (quote-syntax t.expansion)))))
+
+  (define untyped-value-bindings
+    (for/list ([key (in-list value-keys)]
+               [id (in-list untyped-value-ids)])
       (list id #`(l:mod-value-ref #,internal-id '#,(namespaced-symbol key)))))
 
   (define/syntax-parse [val-key ...] value-keys)
-  (define/syntax-parse [val-id ...] value-ids)
+  (define/syntax-parse [val-id ...] typed-value-ids)
   (define/syntax-parse [[val-key/id ...] ...] #'[['val-key (quote-syntax val-id)] ...])
 
   ;; generate module-var-transformer binding for module name
@@ -269,12 +287,13 @@
           (append alias-type-bindings
                   opaque-type-bindings
                   data-type-bindings
-                  constructor-bindings)))
+                  constructor-bindings
+                  typed-value-bindings)))
 
   (define all-value-bindings
     (append constructor-val-bindings
             constructor-pat-bindings
-            value-bindings))
+            untyped-value-bindings))
 
   (list all-syntax-bindings
         all-value-bindings))
