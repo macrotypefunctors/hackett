@@ -181,13 +181,13 @@
       ;; get the constructors
       (define/syntax-parse
         ({~literal #%type-decl} ({~literal #%data} c ...))
-        (hash-ref (sig-decls s) key))
+        (hash-ref s-decls key))
 
       ;; find the "new" constructor ids for the module being introduced
       (define/syntax-parse
         [c-binding-id ...]
         (for/list ([c-id (in-list (@ c))])
-          (or (for/first ([(key id) (in-hash (sig-internal-ids s))]
+          (or (for/first ([(key id) (in-hash s-internal-ids)]
                           #:when (free-identifier=? c-id id))
                 (hash-ref constructor-key->id key))
               (raise-syntax-error c-id
@@ -231,7 +231,7 @@
         (list internal-id (namespaced-symbol key) pat-id val-id))
       (define/syntax-parse
         ({~literal #%constructor-decl} {~var t (type type-expansion-ctx)})
-        (hash-ref (sig-decls s) key))
+        (hash-ref s-decls key))
 
       (list id
             #'(data-constructor
