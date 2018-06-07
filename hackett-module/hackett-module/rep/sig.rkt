@@ -9,6 +9,7 @@
          sig-where)
 
 (require racket/syntax
+         racket/function
          racket/list
          syntax/parse
          syntax/parse/define
@@ -173,14 +174,25 @@
                  (define (intro stx)
                    (internal-definition-context-introduce intdef-ctx* stx))
 
-                 (for ([(key id) (in-hash (@ internal-ids.value))])
-                   (define decl (hash-ref (@ decls.value) key))
-                   (syntax-local-declare-decl id decl intdef-ctx*))]
+                 ;; bind the ids and build up the function together
+                 (define reintro-dots
+                   (apply compose
+                     (for/list ([(key id) (in-hash (@ internal-ids.value))])
+                       (define id- (intro id))
+                       (define decl (hash-ref (@ decls.value) key))
+                       (syntax-local-declare-decl id decl intdef-ctx*)
+                       (cond [(decl-module? decl)
+                              (λ (stx)
+                                (reintroduce-#%dot (intro id) id- stx
+                                                   intdef-ctx*))]
+                             [else
+                              identity]))))]
 
            #:with internal-ids- (intro #'internal-ids)
            #:with [{~var decl- (expanded-decl intdef-ctx*)} ...] (attribute decls.values)
            #:with decls-expansion-
-           (hash-zip (attribute decls.keys) (attribute decl-.expansion))
+           (reintro-dots
+            (hash-zip (attribute decls.keys) (attribute decl-.expansion)))
            #:attr expansion (~>> (syntax/loc/props this-syntax
                                                    (head internal-ids-
                                                          decls-expansion-))
