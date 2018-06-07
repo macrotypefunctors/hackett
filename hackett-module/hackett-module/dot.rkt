@@ -46,49 +46,46 @@
    (syntax-parser
      #:literal-sets [sig-literals]
 
-     [(_ {~module m:module-binding} ~! x:id)
-      #:with m- #'m.internal-id
+     [(_ {~module m:dot-accessible-id/value} ~! x:id)
       #:do [(define key (namespaced:value (syntax-e #'x)))
-            (define decl
-              (hash-ref (sig-decls #'m.sig) key #f))]
-      #:fail-when (and (not (or (decl-val? decl)
-                                (decl-constructor? decl)))
-                       #'x)
-      (format "not bound to a value in module ~a" (syntax-e #'m))
-
-      #:with expr (hash-ref (@ m.value-ids) key)
-
-      #:with (_ t) decl
-      #:with {~var t_qual (type (@ m.expansion-ctx))} #'t
+            (define val-id
+              ((@ m.key->id) key))]
+      #:fail-unless val-id
+      (format "~a is not bound to a value within ~a"
+              (syntax-e #'x)
+              (syntax->datum #'m))
       (syntax-property
-       (attach-type #'expr #'t_qual.expansion)
+       val-id
        disappeared-use
        (syntax-local-introduce #'m))])
 
    ;; as a case-pattern expander
    (syntax-parser
      #:literal-sets [sig-literals]
-     [(_ {~module m:module-binding} ~! x:id)
+     [(_ {~module m:dot-accessible-id/pattern} ~! x:id)
       #:do [(define key (namespaced:value (syntax-e #'x)))
-            (define decl
-              (hash-ref (sig-decls #'m.sig) key #f))]
-      #:fail-when (and (not (decl-constructor? decl)) #'x)
-      (format "not bound to a constructor in module ~a" (syntax-e #'m))
-
-      (hash-ref (@ m.pattern-ids) key)])))
+            (define pat-id
+              ((@ m.key->id) key))]
+      #:fail-unless pat-id
+      (format "~a is not bound to a pattern within ~a"
+              (syntax-e #'x)
+              (syntax->datum #'m))
+      (syntax-property
+       pat-id
+       disappeared-use
+       (syntax-local-introduce #'m))])))
 
 (define-syntax-parser #%dot_τ
-  [(_ {~module m:module-binding} ~! x:id)
+  [(_ {~module m:dot-accessible-id/type} ~! x:id)
    #:do [(define key (namespaced:type (syntax-e #'x)))
-         (define internal-id
-           (hash-ref (sig-internal-ids #'m.sig) key #f))
-         (define decl
-           (hash-ref (sig-decls #'m.sig) key #f))]
-   #:fail-when (and (not (decl-type? decl)) #'x)
-   (format "not bound to a type in module ~a" (syntax-e #'m))
-   #:with {~var t_qual (type (@ m.expansion-ctx))} internal-id
+         (define type-id
+           ((@ m.key->id) key))]
+   #:fail-unless type-id
+   (format "~a is not bound to a type within ~a"
+           (syntax-e #'x)
+           (syntax->datum #'m))
    (syntax-property
-    #'t_qual.expansion
+    type-id
     disappeared-use
     (syntax-local-introduce #'m))])
 

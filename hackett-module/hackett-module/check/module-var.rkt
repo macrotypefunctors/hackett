@@ -1,9 +1,7 @@
 #lang racket/base
 (provide
- (struct-out module-var-transformer)
  generate-module-var-bindings
- syntax-local-bind-module
- module-binding)
+ syntax-local-bind-module)
 
 (require
  racket/list
@@ -17,6 +15,7 @@
  "../prop-reintroducible-dot-type.rkt"
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
+ "../util/stx-subst.rkt"
  "../util/hash.rkt"
  "../util/partition.rkt"
  (for-template "../rep/sig-literals.rkt"
@@ -31,18 +30,15 @@
 
 ;; internal-id : Id
 ;; signature : Signature
-;; alias-type-ids : [Hash Key Id]
-;; opaque-type-ids : [Hash Key Id]
-;; data-type-ids : [Hash Key Id]
-;; constructor-ids : [Hash Key Id]
+;; value-ids : [Hash Key Id]
+;; pattern-ids : [Hash Key Id]
+;; type-ids : [Hash Key Id]
 (struct module-var-transformer
   [internal-id
    signature
-   alias-type-ids
-   opaque-type-ids
-   data-type-ids
    value-ids
    pattern-ids
+   type-ids
    submod-ids]
   #:property prop:procedure
   (λ (self stx)
@@ -54,17 +50,20 @@
      stx))
   #:property prop:dot-accessible
   (λ (self)
-    (match-define (module-var-transformer id _ ha ho hd hv hp hm) self)
+    (match-define (module-var-transformer id _ hv hp ht hm) self)
     (dot-accessible
      id
      (λ (val-key) (hash-ref hv val-key #f))
      (λ (pat-key) (hash-ref hp pat-key #f))
-     (λ (type-key) (or (hash-ref ha type-key #f)
-                       (hash-ref ho type-key #f)
-                       (hash-ref hd type-key #f))))))
+     (λ (type-key) (hash-ref ht type-key #f)))))
 
 (struct opaque-type-constructor
   [module-id external-sym]
+  #:property prop:procedure
+  (λ (self stx)
+    ((make-variable-like-transformer
+      (λ (id) #`(#%type:con #,id)))
+     stx))
   #:property prop:reintroducible-dot-type
   (λ (self)
     (reintroducible-dot-type
@@ -137,11 +136,26 @@
      (hash-zip alias-type-keys alias-type-ids)
      (hash-zip opaque-type-keys opaque-type-ids)
      (hash-zip data-type-keys data-type-ids)))
+
+  (define (expand-type/rem-ctx t)
+    (internal-definition-context-introduce
+     type-expansion-ctx
+     (expand-type t type-expansion-ctx)
+     'remove))
+
   (define (tec-bind-syntax-bindings bs)
     (syntax-local-bind-syntaxes
      (map first bs)
      #`(values #,@(map second bs))
      type-expansion-ctx))
+
+  (define internal->introduced
+    (for*/free-id-table
+        ([hsh (in-list (list (hash-zip alias-type-keys alias-type-ids)
+                             (hash-zip opaque-type-keys opaque-type-ids)
+                             (hash-zip data-type-keys data-type-ids)))]
+         [(key introduced) (in-hash hsh)])
+      (values (hash-ref s-internal-ids key) introduced)))
 
   ;; generate aliases for alias types
 
@@ -150,10 +164,10 @@
                [id (in-list alias-type-ids)])
       (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} t))
         (hash-ref s-decls key))
+      (define/syntax-parse t*
+        (stx-substs #'t internal->introduced))
       (list id
-            #'(make-variable-like-transformer (quote-syntax t)))))
-
-  (tec-bind-syntax-bindings alias-type-bindings)
+            #'(make-variable-like-transformer (quote-syntax t*)))))
 
   (define/syntax-parse [alias-key ...] alias-type-keys)
   (define/syntax-parse [alias-id ...] alias-type-ids)
@@ -210,6 +224,9 @@
   (define/syntax-parse [data-id ...] data-type-ids)
   (define/syntax-parse [[data-key/id ...] ...] #'[['data-key (quote-syntax data-id)] ...])
 
+  (tec-bind-syntax-bindings
+   (append alias-type-bindings opaque-type-bindings data-type-bindings))
+
   ;; generate data-constructor bindings for data types
 
   (define constructor-val-bindings
@@ -230,13 +247,16 @@
       (define/syntax-parse [m-id* sym* pat-id* val-id*]
         (list internal-id (namespaced-symbol key) pat-id val-id))
       (define/syntax-parse
-        ({~literal #%constructor-decl} {~var t (type type-expansion-ctx)})
+        ({~literal #%constructor-decl} t)
         (hash-ref s-decls key))
+      (define/syntax-parse t*
+        (expand-type/rem-ctx #'t))
 
       (list id
             #'(data-constructor
-               (make-variable-like-transformer (quote-syntax val-id*))
-               (quote-syntax t.expansion)
+               (make-typed-var-transformer (quote-syntax val-id*)
+                                           (quote-syntax t*))
+               (quote-syntax t*)
                (λ (sub-pats) #`(l:app/pat-info pat-id* #,sub-pats))
                #f))))
 
@@ -250,12 +270,14 @@
     (for/list ([key (in-list value-keys)]
                [id (in-list typed-value-ids)]
                [un (in-list untyped-value-ids)])
-      (define/syntax-parse ({~literal #%val-decl}
-                            {~var t (type type-expansion-ctx)})
+      (define/syntax-parse ({~literal #%val-decl} t)
         (hash-ref s-decls key))
+      (define/syntax-parse t*
+        (expand-type/rem-ctx #'t))
+
       (list id
             #`(make-typed-var-transformer (quote-syntax #,un)
-                                          (quote-syntax t.expansion)))))
+                                          (quote-syntax t*)))))
 
   (define untyped-value-bindings
     (for/list ([key (in-list value-keys)]
@@ -273,12 +295,14 @@
           #`(module-var-transformer
              (quote-syntax #,internal-id)
              (quote-syntax #,s)
-             (hash alias-key/id ... ...)       ; alias types
-             (hash op-key/id ... ...)          ; opaque types
-             (hash data-key/id ... ...)        ; data types
-             (hash ctor-key/id ... ... val-key/id ... ...) ; values
-             (hash ctor-key/id ... ...)        ; patterns
-             (hash))))                         ; submods
+             ; values
+             (hash ctor-key/id ... ... val-key/id ... ...)
+             ; patterns
+             (hash ctor-key/id ... ...)
+             ; types
+             (hash alias-key/id ... ... op-key/id ... ... data-key/id ... ...)
+             ; submods
+             (hash))))
 
   ;; ------
 
@@ -321,9 +345,9 @@
 
 ;; [Hash Key Id] [Hash Key Id] [Hash Key Id] [Hash Key Id] -> IntDefCtx
 (define (make-type-expansion-context internal-ids
-                                            alias-key->id
-                                            opaque-key->id
-                                            data-key->id)
+                                     alias-key->id
+                                     opaque-key->id
+                                     data-key->id)
   (define intdef-ctx
     (syntax-local-make-definition-context))
 
@@ -344,48 +368,17 @@
     (define internal-id (hash-ref internal-ids key))
     (syntax-local-bind-syntaxes
      (list internal-id)
-     #`(make-variable-like-transformer (quote-syntax (#%type:con #,opaque-id)))
+     #`(make-variable-like-transformer (quote-syntax #,opaque-id))
      intdef-ctx))
 
   (for ([(key data-id) (in-hash data-key->id)])
     (define internal-id (hash-ref internal-ids key))
     (syntax-local-bind-syntaxes
      (list internal-id)
-     #`(make-variable-like-transformer (quote-syntax (#%type:con #,data-id)))
+     #`(make-variable-like-transformer (quote-syntax #,data-id))
      intdef-ctx))
 
   intdef-ctx)
-
-
-(define-syntax-class module-binding
-  #:description "module name"
-  #:attributes [value internal-id sig opaque-ids value-ids pattern-ids submod-ids expansion-ctx]
-  [pattern {~var m (local-value module-var-transformer?)}
-           #:attr value (@ m.local-value)
-           #:do [(match-define (module-var-transformer x-
-                                                       s
-                                                       ali-key->id
-                                                       op-key->id
-                                                       data-key->id
-                                                       val-key->id
-                                                       pat-key->id
-                                                       submod-key->id)
-                   (@ value))]
-           #:with internal-id (syntax-local-introduce x-)
-           #:attr sig (syntax-local-introduce s)
-           #:attr alias-ids ali-key->id
-           #:attr opaque-ids op-key->id
-           #:attr data-ids data-key->id
-           #:attr value-ids val-key->id
-           #:attr pattern-ids pat-key->id
-           #:attr submod-ids submod-key->id
-           #:attr expansion-ctx
-           (make-type-expansion-context (sig-internal-ids (@ sig))
-                                               (@ alias-ids)
-                                               (@ opaque-ids)
-                                               (@ data-ids)
-                                               ; TOOD: submod-ids?
-                                               )])
 
 ;; ---------------------------------------------------------
 
