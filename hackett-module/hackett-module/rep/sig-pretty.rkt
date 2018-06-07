@@ -15,6 +15,8 @@
  "../util/stx-traverse.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
+               (only-in (unmangle-in #:only "../dot/dot-m.rkt")
+                        [#%dot #%dot_m])
                (only-in (unmangle-in #:only "../dot/dot-t.rkt")
                         [#%dot #%dot_τ])))
 
@@ -89,7 +91,11 @@
   (type->string
    (let traverse ([t t])
      (syntax-parse t
-       #:literals [#%dot_τ]
+       #:literals [#%dot_m #%dot_τ]
+       [(#%dot_m m:expr x:id)
+        (format-id #f "~a.~a"
+                   (syntax->datum (traverse #'m))
+                   #'x)]
        [(#%dot_τ m:expr x:id)
         (format-id #f "~a.~a"
                    (syntax->datum (traverse #'m))
