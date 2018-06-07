@@ -15,7 +15,7 @@
  "../util/stx-traverse.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
-               (only-in (unmangle-in #:only "../dot.rkt")
+               (only-in (unmangle-in #:only "../dot/dot-t.rkt")
                         [#%dot #%dot_τ])))
 
 
