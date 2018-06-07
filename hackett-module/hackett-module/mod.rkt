@@ -68,7 +68,7 @@
                                  #'#%variable-reference)))
 
   (define-syntax-class hackett-module-component
-    #:attributes [sig-entry [val-id 1] residual]
+    #:attributes [sig-entry [val-id 1] [mod-id 1] residual]
     #:literal-sets [mod-stop-literals]
 
     ;; NOTE: we are not introducing the type namespace
@@ -77,6 +77,7 @@
     [pattern (hkt:: ~! id:id type:expr {~optional #:exact})
              #:with sig-entry #'(sig:val id : type)
              #:with [val-id ...] #'[id]
+             #:with [mod-id ...] #'[]
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
                                               (syntax-local-introduce #'id))]
@@ -87,6 +88,7 @@
                        ...)
              #:with sig-entry #'(sig:data id variant-stuff ... ...)
              #:with [val-id ...] #'[variant.tag ...]
+             #:with [mod-id ...] #'[]
              ;; TODO: attach the other things
              #:with residual #'(values)]
 
@@ -95,13 +97,16 @@
              "type aliases with arguments not allowed in modules"
              #:with sig-entry #'(sig:type spec = rhs)
              #:with [val-id ...] #'[]
+             #:with [mod-id ...] #'[]
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
                                               (syntax-local-introduce #'spec))]
 
     [pattern (mod:def-module ~! M:id body:expr)
-             #:with sig-entry #'(sig:module M : ????)
+             #:with [_ sig] (sig⇒ (module-namespace-introduce #'body))
+             #:with sig-entry #'(sig:module M : sig)
              #:with [val-id ...] #'[]
+             #:with [mod-id ...] (module-namespace-introduce #'[M])
              #:with residual #'(values)]
 
     )
@@ -168,9 +173,10 @@
              #:with :mod/acc-sig #'next]))
 
 (define-syntax-parser mod/acc
-  [(_ [sig-entry/rev ...] [val-id/rev ...])
+  [(_ [sig-entry/rev ...] [val-id/rev ...] [mod-id/rev ...])
    #:with [sig-entry ...] (reverse (attribute sig-entry/rev))
    #:with [val-id ...] (reverse (attribute val-id/rev))
+   #:with [mod-id ...] (reverse (attribute mod-id/rev))
    #:with s:sig #'(sig:sig sig-entry ...)
 
    #:do [(define ctor-ids/vals
@@ -189,7 +195,7 @@
      (define make-match-pat (data-constructor-make-match-pat v))
      (list #`'#,id #`(l:make-pat-info #,(make-match-pat sub-ids) #,sub-ids)))
 
-   #:with [[submod-sym/id ...] ...] #'[]
+   #:with [[submod-sym/id ...] ...] #'[['mod-id/rev mod-id/rev] ...]
 
    #:with final-expression #'(let-values ([() s.residual])
                                (l:mod (hash val-sym/id ... ...)
@@ -201,25 +207,29 @@
      (syntax-local-introduce
       (attribute s.expansion)))]
 
-  [(head [ent/rev ...] [v/rev ...] defn rest-defn ...)
+  [(head [ent/rev ...] [v/rev ...] [m/rev ...] defn rest-defn ...)
    #:with defn- (local-expand #'defn 'module mod-stop-ids)
    (syntax-parse #'defn-
      #:literal-sets [mod-stop-literals]
 
      [(begin form ...)
-      #'(mod/acc [ent/rev ...] [v/rev ...] form ... rest-defn ...)]
+      #'(mod/acc [ent/rev ...] [v/rev ...] [m/rev ...] form ... rest-defn ...)]
 
      [d:hackett-module-component
       (syntax-track-origin
        #'(begin
            defn-
-           (mod/acc [d.sig-entry ent/rev ...] [d.val-id ... v/rev ...]
+           (mod/acc [d.sig-entry ent/rev ...]
+                    [d.val-id ... v/rev ...]
+                    [d.mod-id ... m/rev ...]
                     rest-defn ...))
        #'d.residual
        #'head)]
 
      [:pass-through
-      #'(begin defn- (mod/acc [ent/rev ...] [v/rev ...] rest-defn ...))]
+      #'(begin
+          defn-
+          (mod/acc [ent/rev ...] [v/rev ...] [m/rev ...] rest-defn ...))]
 
      [{~and (head . _) :disallowed}
       (raise-syntax-error #f
@@ -235,7 +245,7 @@
    ;; expand `mod/acc` in a (let () ....) to parse the definitions
    #:with expansion:mod/acc-sig
    (local-expand #'(let ()
-                     (mod/acc [] [] defn* ...))
+                     (mod/acc [] [] [] defn* ...))
                  'module
                  '())
 

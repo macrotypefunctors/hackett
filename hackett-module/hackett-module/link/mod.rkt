@@ -9,6 +9,7 @@
  (struct-out mod)
  mod-value-ref
  mod-pattern-ref
+ mod-submod-ref
  (struct-out pat-info)
  app/pat-info
  make-pat-info)

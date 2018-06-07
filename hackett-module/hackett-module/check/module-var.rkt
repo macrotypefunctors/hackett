@@ -57,7 +57,8 @@
      sym
      (λ (val-key) (hash-ref hv val-key #f))
      (λ (pat-key) (hash-ref hp pat-key #f))
-     (λ (type-key) (hash-ref ht type-key #f)))))
+     (λ (type-key) (hash-ref ht type-key #f))
+     (λ (mod-key) (hash-ref hm mod-key #f)))))
 
 (struct opaque-type-constructor
   [module-sym external-sym]
@@ -98,11 +99,18 @@
 
   (match-define
     (list opaque-type-keys data-type-keys alias-type-keys
-          constructor-keys value-keys)
+          constructor-keys value-keys
+          submod-keys)
     (partition-decl-keys
      (list decl-type-opaque? decl-type-data? decl-type-alias?
-           decl-constructor? decl-val?)
+           decl-constructor? decl-val?
+           decl-module?)
      s-decls))
+
+  (define submod-ids
+    (generate-prefixed-temporaries (format-symbol "module:~a." name)
+                                   submod-keys))
+  (define submod-val-ids (generate-temporaries submod-keys))
 
   (define opaque-type-ids
     (generate-prefixed-temporaries (format-symbol "opaque:~a." name)
@@ -155,11 +163,40 @@
 
   (define internal->introduced
     (for*/free-id-table
-        ([hsh (in-list (list (hash-zip alias-type-keys alias-type-ids)
+        ([hsh (in-list (list (hash-zip submod-keys submod-ids)
+                             (hash-zip alias-type-keys alias-type-ids)
                              (hash-zip opaque-type-keys opaque-type-ids)
                              (hash-zip data-type-keys data-type-ids)))]
          [(key introduced) (in-hash hsh)])
       (values (hash-ref s-internal-ids key) introduced)))
+
+  ;; generate bindings for submodules
+
+  (define submod-internal-id-bindings/val
+    (for/list ([key (in-list submod-keys)]
+               [id (in-list submod-val-ids)])
+      (list id #`(l:mod-submod-ref #,internal-id '#,(namespaced-symbol key)))))
+
+  ;; generate the bindings for submodules using a recursive
+  ;; call to generate-module-var-bindings
+  (match-define (list (list submod-bindingss/stx submod-bindingss/val) ...)
+    (for/list ([key (in-list submod-keys)]
+               [id (in-list submod-ids)]
+               [internal-id (in-list submod-val-ids)])
+      (define/syntax-parse ({~literal #%module-decl} sub-s)
+        (hash-ref s-decls key))
+      (define sub-s*
+        (stx-substs #'sub-s internal->introduced))
+      (generate-module-var-bindings id internal-id sub-s*)))
+
+  (define submod-bindings/stx (append* submod-bindingss/stx))
+  (define submod-bindings/val
+    (append* submod-internal-id-bindings/val submod-bindingss/val))
+  
+  (define/syntax-parse [submod-key ...] submod-keys)
+  (define/syntax-parse [submod-id ...] submod-ids)
+  (define/syntax-parse [[submod-key/id ...] ...]
+    #'[['submod-key (quote-syntax submod-id)] ...])
 
   ;; generate aliases for alias types
 
@@ -229,7 +266,8 @@
   (define/syntax-parse [[data-key/id ...] ...] #'[['data-key (quote-syntax data-id)] ...])
 
   (tec-bind-syntax-bindings
-   (append alias-type-bindings opaque-type-bindings data-type-bindings))
+   (append submod-bindings/stx
+           alias-type-bindings opaque-type-bindings data-type-bindings))
 
   ;; generate data-constructor bindings for data types
 
@@ -307,20 +345,22 @@
              ; types
              (hash alias-key/id ... ... op-key/id ... ... data-key/id ... ...)
              ; submods
-             (hash))))
+             (hash submod-key/id ... ...))))
 
   ;; ------
 
   (define all-syntax-bindings
     (cons module-binding
-          (append alias-type-bindings
+          (append submod-bindings/stx
+                  alias-type-bindings
                   opaque-type-bindings
                   data-type-bindings
                   constructor-bindings
                   typed-value-bindings)))
 
   (define all-value-bindings
-    (append constructor-val-bindings
+    (append submod-bindings/val
+            constructor-val-bindings
             constructor-pat-bindings
             untyped-value-bindings))
 
