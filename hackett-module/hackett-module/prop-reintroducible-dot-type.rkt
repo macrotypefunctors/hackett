@@ -8,9 +8,9 @@
     (-> any/c reintroducible-dot-type?))]
   [reintroducible-dot-type?
    (-> any/c boolean?)]
-  [reintroducible-dot-type-module
+  [reintroducible-dot-type-module-sym
    (-> reintroducible-dot-type?
-       identifier?)]
+       symbol?)]
   [reintroducible-dot-type-external-sym
    (-> reintroducible-dot-type?
        symbol?)]
@@ -34,16 +34,16 @@
   (syntax-property stx stxprop:reintroducible-dot-type rdt))
 
 (define-struct-like-struct-type-property reintroducible-dot-type
-  [module external-sym])
+  [module-sym external-sym])
 
 (define-syntax-class (reintroducible-dot-type-id [ctx #f])
-  #:attributes [local-value module-id external-sym]
+  #:attributes [local-value module-sym external-sym]
   [pattern x:id
            #:attr local-value (syntax-local-value #'x (λ () #f) ctx)
            #:when (reintroducible-dot-type? (attribute local-value))
            #:do [(match-define (reintroducible-dot-type m s)
                    (attribute local-value))]
-           #:with module-id m
+           #:attr module-sym m
            #:with external-sym s]
   [pattern x:id
            #:attr local-value
@@ -51,5 +51,5 @@
            #:when (reintroducible-dot-type? (attribute local-value))
            #:do [(match-define (reintroducible-dot-type m s)
                    (attribute local-value))]
-           #:with module-id m
+           #:attr module-sym m
            #:with external-sym s])

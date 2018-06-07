@@ -14,6 +14,7 @@
  "namespace/reqprov.rkt"
  (prefix-in l: "link/mod.rkt")
  (for-syntax racket/base
+             racket/bool
              racket/match
              racket/syntax
              syntax/parse
@@ -95,10 +96,11 @@
   ;; the ctx contains a module-binding for m-dots-are-from-id
   ;; ASSUME s-to-reintro is already expanded
   (define (reintroduce-#%dot m-dots-are-from-id m-to-prefix-id s-to-reintro ctx)
-    (define/syntax-parse [m/internal m/prefix]
-      (list (dot-origin-internal-id
-             (syntax-local-value m-dots-are-from-id #f ctx))
-            m-to-prefix-id))
+    (define origin-sym
+      (dot-origin-module-sym
+       (syntax-local-value m-dots-are-from-id #f ctx)))
+    (define/syntax-parse m/prefix
+      m-to-prefix-id)
 
     ;; determine which opaque cons to substitute by comparing
     ;; their mod internal id's with the prefix, to see if we should
@@ -109,7 +111,7 @@
         #:literals [#%type:con]
         [{~or (#%type:con {~var x (reintroducible-dot-type-id ctx)})
               {~var x (reintroducible-dot-type-id ctx)}}
-         (if (free-identifier=? #'x.module-id #'m/internal)
+         (if (symbol=? (@ x.module-sym) origin-sym)
              (syntax/loc stx (#%dot_τ m/prefix x.external-sym))
              stx)]
 

@@ -95,6 +95,7 @@
 ;; declares that the decl exists without binding what
 ;; its "equal to".
 (define (syntax-local-declare-decl id decl intdef-ctx)
+  (define unique-sym (gensym (syntax-e id)))
   (syntax-parse decl
     #:context 'syntax-local-declare-decl
     #:literal-sets [sig-literals]
@@ -121,17 +122,17 @@
      (syntax-local-bind-syntaxes
       (list id)
       #`(declared-module-var
-         (quote-syntax #,id)
+         '#,unique-sym
          (hash key/tmp-id ... ...))
       intdef-ctx)]))
 
-(struct declared-module-var [module-id type-key->tmp-id]
+(struct declared-module-var [module-sym type-key->tmp-id]
   #:property prop:dot-origin
   (λ (self)
-    (dot-origin (declared-module-var-module-id self)))
+    (dot-origin (declared-module-var-module-sym self)))
   #:property prop:dot-accessible/type
   (λ (self)
-    (define m-id (declared-module-var-module-id self))
+    (define m-sym (declared-module-var-module-sym self))
     (define hsh (declared-module-var-type-key->tmp-id self))
     (dot-accessible/type
      (λ (key)
@@ -139,7 +140,7 @@
        (and id
             (attach-reintroducible-dot-type
              id
-             (reintroducible-dot-type m-id (namespaced-symbol key))))))))
+             (reintroducible-dot-type m-sym (namespaced-symbol key))))))))
 
 ;; -----------------
 

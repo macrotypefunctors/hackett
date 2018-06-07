@@ -29,12 +29,14 @@
                         [type-constructor data-type-constructor])))
 
 ;; internal-id : Id
+;; unique-symbol : Symbol
 ;; signature : Signature
 ;; value-ids : [Hash Key Id]
 ;; pattern-ids : [Hash Key Id]
 ;; type-ids : [Hash Key Id]
 (struct module-var-transformer
   [internal-id
+   unique-symbol
    signature
    value-ids
    pattern-ids
@@ -50,15 +52,15 @@
      stx))
   #:property prop:dot-accessible
   (λ (self)
-    (match-define (module-var-transformer id _ hv hp ht hm) self)
+    (match-define (module-var-transformer _ sym _ hv hp ht hm) self)
     (dot-accessible
-     id
+     sym
      (λ (val-key) (hash-ref hv val-key #f))
      (λ (pat-key) (hash-ref hp pat-key #f))
      (λ (type-key) (hash-ref ht type-key #f)))))
 
 (struct opaque-type-constructor
-  [module-id external-sym]
+  [module-sym external-sym]
   #:property prop:procedure
   (λ (self stx)
     ((make-variable-like-transformer
@@ -67,16 +69,16 @@
   #:property prop:reintroducible-dot-type
   (λ (self)
     (reintroducible-dot-type
-     (opaque-type-constructor-module-id self)
+     (opaque-type-constructor-module-sym self)
      (opaque-type-constructor-external-sym self))))
 
 (struct data-type-constructor/reintroducible
   data-type-constructor
-  [module-id external-sym]
+  [module-sym external-sym]
   #:property prop:reintroducible-dot-type
   (λ (self)
     (reintroducible-dot-type
-     (data-type-constructor/reintroducible-module-id self)
+     (data-type-constructor/reintroducible-module-sym self)
      (data-type-constructor/reintroducible-external-sym self))))
 
 ;; Generates bindings needed to introduce a module with the
@@ -85,6 +87,8 @@
 ;;   [List [Listof [List Id TransformerStx]]     ; transformer bindings
 ;;         [Listof [List Id Stx]]]               ; value binding
 (define (generate-module-var-bindings name internal-id s)
+
+  (define/syntax-parse unique-symbol (gensym (syntax-e name)))
 
   (define-values [s-internal-ids s-decls]
     (syntax-parse s
@@ -180,7 +184,7 @@
                [id (in-list opaque-type-ids)])
       (list id
             #`(opaque-type-constructor
-               (quote-syntax #,internal-id)
+               'unique-symbol
                '#,(namespaced-symbol key)))))
 
   (define/syntax-parse [op-key ...] opaque-type-keys)
@@ -216,7 +220,7 @@
                '#,type-var-arity                       ; arity
                (list (quote-syntax c-binding-id) ...)  ; constructor ids
                #f                                      ; fixity
-               (quote-syntax #,internal-id)            ; module id
+               'unique-symbol                          ; module sym
                '#,(namespaced-symbol key)              ; external key
                ))))
 
@@ -244,8 +248,8 @@
                [id (in-list constructor-ids)]
                [pat-id (in-list constructor-pat-ids)]
                [val-id (in-list constructor-val-ids)])
-      (define/syntax-parse [m-id* sym* pat-id* val-id*]
-        (list internal-id (namespaced-symbol key) pat-id val-id))
+      (define/syntax-parse [pat-id* val-id*]
+        (list pat-id val-id))
       (define/syntax-parse
         ({~literal #%constructor-decl} t)
         (hash-ref s-decls key))
@@ -294,6 +298,7 @@
     (list name
           #`(module-var-transformer
              (quote-syntax #,internal-id)
+             'unique-symbol
              (quote-syntax #,s)
              ; values
              (hash ctor-key/id ... ... val-key/id ... ...)
