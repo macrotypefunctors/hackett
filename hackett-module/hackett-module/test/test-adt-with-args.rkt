@@ -3,7 +3,8 @@
 
 (def-module M
   (mod
-    (data Posn (Posn Integer Integer))))
+    (type Coord Integer)
+    (data Posn (Posn Coord Coord))))
 
 (def three-four : M.Posn
   (M.Posn 3 4))
