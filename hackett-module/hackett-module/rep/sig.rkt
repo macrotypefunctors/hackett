@@ -22,7 +22,6 @@
          "../util/stx-traverse.rkt"
          "../util/stx-subst.rkt"
          "../util/hash.rkt"
-         "../check/module-var.rkt"
          "../prop-dot-accessible.rkt"
          "../prop-reintroducible-dot-type.rkt"
          (for-syntax racket/base)
@@ -198,7 +197,7 @@
                    (internal-definition-context-introduce intdef-ctx* stx))
 
                  (syntax-local-bind-syntaxes (list #'x-) #f intdef-ctx*)
-                 (syntax-local-bind-module #'x #'x- #'A.expansion intdef-ctx*)]
+                 (syntax-local-declare-decl #'x #'(#%module-decl A.expansion) intdef-ctx*)]
 
            #:with x-- (intro #'x-)
            #:with {~var B* (sig intdef-ctx*)} #'B
