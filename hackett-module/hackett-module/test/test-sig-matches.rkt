@@ -75,6 +75,11 @@
  (Π ([x : J]) (sig (val v : x.t)))
  (Π ([x : J*]) (sig (val v : x.s))))
 
+(def-module xj* (seal (mod (type s Bool) (type t s)) :> J*))
+(check-sig-matches
+ (sig (val v : xj*.t))
+ (sig (val v : xj*.s)))
+
 ;; -----------------
 
 (check-sig-matches
