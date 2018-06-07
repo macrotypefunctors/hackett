@@ -6,6 +6,7 @@
 (require syntax/parse/define
          "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
+         (only-in "dot-m.rkt" dot-accessible-path/type)
          (only-in hackett/private/type-language #%type:con)
          (for-syntax racket/base
                      racket/bool
@@ -19,7 +20,7 @@
   (define disappeared-use 'disappeared-use))
 
 (define-syntax-parser #%dot
-  [(_ {~module m:dot-accessible-id/type} ~! x:id)
+  [(_ {~module m:dot-accessible-path/type} ~! x:id)
    #:do [(define key (namespaced:type (syntax-e #'x)))
          (define type-id
            ((@ m.key->id) key))]

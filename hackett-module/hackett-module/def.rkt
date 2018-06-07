@@ -41,7 +41,8 @@
        (printf "inferred: ~a\n" 'sig-str)
        (define name- m-)
        (define-syntaxes [stx-id ...] (values transformer ...))
-       (define-values [val-id ...] (values expr ...))
+       (define val-id expr)
+       ...
        (printf "module body: ")
        (pretty-write name))])
 

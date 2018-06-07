@@ -6,11 +6,13 @@
  prop:dot-accessible/value   dot-accessible/value   dot-accessible/value?
  prop:dot-accessible/pattern dot-accessible/pattern dot-accessible/pattern?
  prop:dot-accessible/type    dot-accessible/type    dot-accessible/type?
+ prop:dot-accessible/module  dot-accessible/module  dot-accessible/module?
  prop:dot-accessible         dot-accessible         #| no predicate |#
  ;; ----------------
  dot-accessible-id/value
  dot-accessible-id/pattern
  dot-accessible-id/type
+ dot-accessible-id/module
  )
 
 (require struct-like-struct-type-property
@@ -36,11 +38,15 @@
 (define-struct-like-struct-type-property dot-accessible/type
   [key->id])
 
+(define-struct-like-struct-type-property dot-accessible/module
+  [key->id])
+
 (define-struct-like-struct-type-property dot-accessible
   [module-sym
    value-key->id
    pattern-key->id
-   type-key->id]
+   type-key->id
+   module-key->id]
   #:property prop:dot-origin
   (λ (self) (dot-origin (dot-accessible-module-sym self)))
   #:property prop:dot-accessible/value
@@ -48,7 +54,9 @@
   #:property prop:dot-accessible/pattern
   (λ (self) (dot-accessible/pattern (dot-accessible-pattern-key->id self)))
   #:property prop:dot-accessible/type
-  (λ (self) (dot-accessible/type (dot-accessible-type-key->id self))))
+  (λ (self) (dot-accessible/type (dot-accessible-type-key->id self)))
+  #:property prop:dot-accessible/module
+  (λ (self) (dot-accessible/module (dot-accessible-module-key->id self))))
 
 ;; ---------------------------------------------------------
 
@@ -66,4 +74,9 @@
   #:attributes [key->id]
   [pattern {~var id (local-value dot-accessible/type?)}
     #:attr key->id (dot-accessible/type-key->id (attribute id.local-value))])
+
+(define-syntax-class dot-accessible-id/module
+  #:attributes [key->id]
+  [pattern {~var || (local-value dot-accessible/module?)}
+    #:attr key->id (dot-accessible/module-key->id (attribute local-value))])
 
