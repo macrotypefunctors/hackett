@@ -5,6 +5,9 @@
 (require syntax/parse/define
          "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
+         (only-in "dot-m.rkt"
+                  dot-accessible-path/value
+                  dot-accessible-path/pattern)
          (for-syntax racket/base
                      (only-in hackett/private/prop-case-pattern-expander
                               prop:case-pattern-expander)
@@ -27,7 +30,7 @@
    (syntax-parser
      #:literal-sets [sig-literals]
 
-     [(_ {~module m:dot-accessible-id/value} ~! x:id)
+     [(_ {~module m:dot-accessible-path/value} ~! x:id)
       #:do [(define key (namespaced:value (syntax-e #'x)))
             (define val-id
               ((@ m.key->id) key))]
@@ -43,7 +46,7 @@
    ;; as a case-pattern expander
    (syntax-parser
      #:literal-sets [sig-literals]
-     [(_ {~module m:dot-accessible-id/pattern} ~! x:id)
+     [(_ {~module m:dot-accessible-path/pattern} ~! x:id)
       #:do [(define key (namespaced:value (syntax-e #'x)))
             (define pat-id
               ((@ m.key->id) key))]

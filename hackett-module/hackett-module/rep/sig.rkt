@@ -167,21 +167,30 @@
 
      id/mps]))
 
-(struct declared-module-var [module-sym type-key->tmp-id]
+(struct declared-module-var [module-sym key->tmp-id]
   #:property prop:dot-origin
   (λ (self)
     (dot-origin (declared-module-var-module-sym self)))
   #:property prop:dot-accessible/type
   (λ (self)
     (define m-sym (declared-module-var-module-sym self))
-    (define hsh (declared-module-var-type-key->tmp-id self))
+    (define hsh (declared-module-var-key->tmp-id self))
     (dot-accessible/type
      (λ (key)
        (define id (hash-ref hsh key #f))
        (and id
             (attach-reintroducible-dot-type
              id
-             (reintroducible-dot-type m-sym (namespaced-symbol key))))))))
+             (reintroducible-dot-type m-sym (namespaced-symbol key)))))))
+  #:property prop:dot-accessible/module
+  (λ (self)
+    (define m-sym (declared-module-var-module-sym self))
+    (define hsh (declared-module-var-key->tmp-id self))
+    (dot-accessible/module
+     (λ (key)
+       (define id (hash-ref hsh key #f))
+       ;; TODO: make this cooperate somehow with reintroduce-dots
+       id))))
 
 ;; -----------------
 
