@@ -7,9 +7,11 @@
          "../namespace/reqprov.rkt"
          (for-syntax racket/base))
 
-;; a ModulePrefix is one of:
+
+;; a ModulePath is one of:
 ;;   - Identifier
-;;   - #'(#%dot ModulePrefix Symbol)
+;;   - #'(#%dot ModulePath Symbol)
+;; represents a path to a module or submodule
 
 (define-syntax #%dot
   (syntax-parser
