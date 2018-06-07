@@ -112,7 +112,7 @@
      (define/syntax-parse [[key tmp-id] ...]
        (for/list ([(key id) (in-hash (@ internal-ids.value))])
          (define decl (hash-ref (@ decls.value) key))
-         (define tmp-id (generate-temporary (namespaced-symbol key)))
+         (define tmp-id (generate-temporary/1num (namespaced-symbol key)))
          (syntax-local-declare-decl tmp-id decl intdef-ctx)
          (list key tmp-id)))
 
@@ -189,7 +189,7 @@
 
   ;; (#%pi-sig ([param-id sig]) sig)
   [pattern (head:#%pi-sig ([x:id {~var A (sig intdef-ctx)}]) B:expr)
-           #:with x- (generate-temporary #'x)
+           #:with x- (generate-temporary/1num #'x)
 
            ;; create a context where x is bound
            #:do [(define intdef-ctx* (syntax-local-make-definition-context intdef-ctx))

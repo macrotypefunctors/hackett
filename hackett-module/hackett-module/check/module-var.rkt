@@ -393,6 +393,6 @@
 
 ;; SymStr [Listof Key] -> [Listof Id]
 (define (generate-prefixed-temporaries prefix keys)
-  (generate-temporaries
+  (generate-temporaries/1num
    (for/list ([k (in-list keys)])
      (format-symbol "~a~a" prefix (namespaced-symbol k)))))
