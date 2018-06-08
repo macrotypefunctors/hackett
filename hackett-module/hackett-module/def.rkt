@@ -40,7 +40,8 @@
        (printf "\n---------\nbinding: ~a\n" 'name)
        (printf "inferred: ~a\n" 'sig-str)
        (define name- m-)
-       (define-syntaxes [stx-id ...] (values transformer ...))
+       (define-syntax stx-id transformer)
+       ...
        (define val-id expr)
        ...
        (printf "module body: ")
