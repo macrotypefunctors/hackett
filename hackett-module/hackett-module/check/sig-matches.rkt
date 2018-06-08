@@ -48,23 +48,19 @@
    ;; the "in" is contravariant
    (signature-matches? #'B-in #'A-in)
    (let ()
-     (define/syntax-parse x- (generate-temporary #'B-x))
-
      ;; Create a context where both `A-x` and `B-x` are bound
      ;; to the same module with the signature `B-in`.
      ;; It's `B-in` because it has the most specific entries
      ;; that both signatures need to be compatible with.
      (define ctx (syntax-local-make-definition-context))
-     (syntax-local-bind-syntaxes (list #'x-) #f ctx)
+     (syntax-local-bind-decl #'B-x #'(#%module-decl B-in) ctx)
      (syntax-local-bind-syntaxes
       (list #'A-x)
       #'(make-rename-transformer (quote-syntax B-x))
       ctx)
-     (syntax-local-bind-module #'B-x #'x- #'B-in ctx)
 
      (define A-out* (expand-sig #'A-out ctx))
      (define B-out* (expand-sig #'B-out ctx))
-
      (signature-matches? A-out* B-out*))))
 
 ;; ---------------------------------------------------------
@@ -136,20 +132,25 @@
 
 ;; Id Decl IntDefCtx -> Void
 (define (syntax-local-bind-decl id decl ctx)
-  (syntax-local-bind-syntaxes
-   (list id)
-   (decl->transformer-stx decl)
-   ctx))
-
-;; Decl -> TransformerStx or #f
-(define (decl->transformer-stx decl)
   (syntax-parse decl
     #:literal-sets [sig-literals]
-    [(#%val-decl _) #f]
-    [(#%constructor-decl _) #f]
-    [(#%type-decl (#%opaque)) #f]
-    [(#%type-decl (#%data c ...)) #f]
-    [(#%type-decl (#%alias t)) #'(make-variable-like-transformer (quote-syntax t))]))
+    [{~or (#%val-decl _)
+          (#%constructor-decl _)}
+     (syntax-local-bind-syntaxes (list id) #f ctx)]
+
+    [{~or (#%type-decl (#%opaque))
+          (#%type-decl (#%data c ...))}
+     (syntax-local-bind-syntaxes (list id) #f ctx)]
+
+    [(#%type-decl (#%alias t))
+     (define rhs #'(make-variable-like-transformer (quote-syntax t)))
+     (syntax-local-bind-syntaxes (list id) rhs ctx)]
+
+    [(#%module-decl signature)
+     (define internal-id (generate-temporary id))
+     (syntax-local-bind-syntaxes (list internal-id) #f ctx)
+     (syntax-local-bind-module id internal-id #'signature ctx)]))
+
 
 ;; Decl Decl -> Bool
 (define (sig-entry-matches? A B)
@@ -171,6 +172,9 @@
      (free-id-set=?
       (immutable-free-id-set (@ c-A))
       (immutable-free-id-set (@ c-B)))]
+
+    [[(#%module-decl A) (#%module-decl B)]
+     (sig-matches? #'A #'B)]
 
     [[_ _]
      #false]))
