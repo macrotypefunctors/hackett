@@ -119,10 +119,8 @@
         (values id (hash-ref key->common key))))))
 
   (for ([(key decl) (in-hash (sig-decls A*))])
-    (syntax-local-bind-syntaxes
-     (list (hash-ref key->common key))
-     (decl->transformer-stx decl)
-     common-ctx))
+    (define common-id (hash-ref key->common key))
+    (syntax-local-bind-decl common-id decl common-ctx))
 
   ;; check that all components in B correspond with
   ;; components in A
@@ -135,6 +133,13 @@
            (sig-entry-matches?
             A-decl*
             B-decl*)))))
+
+;; Id Decl IntDefCtx -> Void
+(define (syntax-local-bind-decl id decl ctx)
+  (syntax-local-bind-syntaxes
+   (list id)
+   (decl->transformer-stx decl)
+   ctx))
 
 ;; Decl -> TransformerStx or #f
 (define (decl->transformer-stx decl)
