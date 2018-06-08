@@ -10,10 +10,31 @@
   (sig
     (module Sub :
       (sig
-        (type T)))
+        (type T)
+        (val t : T)))
 
     (type R = Sub.T)
+    (val r : R)
     ))
+
+(def-module M
+  (seal (mod
+          (def-module Sub
+            (mod
+              (type T Integer)
+              (def t 4)))
+          (type R Sub.T)
+          (def r 5))
+        :>
+        S))
+
+(def from-submod : M.Sub.T
+  M.r)
+
+(def also-from-submod : M.R
+  M.Sub.t)
+
+;; --------------------------------------
 
 (def-signature H
   (Π ([M : (sig (type T = Integer))])
