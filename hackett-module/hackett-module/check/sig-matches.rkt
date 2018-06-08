@@ -80,8 +80,8 @@
   ;; environment that will be used for checking the components against
   ;; each other
 
-  ;; sym->common : [Hashof Sym Common]
-  (define sym->common
+  ;; key->common : [Hashof Key Common]
+  (define key->common
     (let*
         ([acc (hash)]
          [acc
@@ -108,26 +108,26 @@
     (intro
      (signature-substs
       A
-      (for/free-id-table ([(sym id) (in-hash (@ A-internal-ids.value))])
-        (values id (hash-ref sym->common sym))))))
+      (for/free-id-table ([(key id) (in-hash (@ A-internal-ids.value))])
+        (values id (hash-ref key->common key))))))
 
   (define B*
     (intro
      (signature-substs
       B
-      (for/free-id-table ([(sym id) (in-hash (@ B-internal-ids.value))])
-        (values id (hash-ref sym->common sym))))))
+      (for/free-id-table ([(key id) (in-hash (@ B-internal-ids.value))])
+        (values id (hash-ref key->common key))))))
 
-  (for ([(sym decl) (in-hash (sig-decls A*))])
+  (for ([(key decl) (in-hash (sig-decls A*))])
     (syntax-local-bind-syntaxes
-     (list (hash-ref sym->common sym))
+     (list (hash-ref key->common key))
      (decl->transformer-stx decl)
      common-ctx))
 
   ;; check that all components in B correspond with
   ;; components in A
-  (for/and ([(sym B-decl) (in-hash (sig-decls B*))])
-    (define A-decl (hash-ref (sig-decls A*) sym #f))
+  (for/and ([(key B-decl) (in-hash (sig-decls B*))])
+    (define A-decl (hash-ref (sig-decls A*) key #f))
     (and A-decl
          (let ()
            (define A-decl* (expand-decl A-decl common-ctx))
