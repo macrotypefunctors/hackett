@@ -13,6 +13,7 @@
  (only-in hackett/private/typecheck type->string type-literals)
  "../util/stx.rkt"
  "../util/stx-traverse.rkt"
+ "../util/stx-subst.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
                (only-in (unmangle-in #:only "../dot/dot-m.rkt")
@@ -51,7 +52,7 @@
               (map cons (@ ids.values) (map namespaced-symbol (@ ids.keys)))))
            (define decls*
              (for/list ([(k d) (in-hash (@ decls.value))])
-               (decl->datum (namespaced-symbol k) (subst-ids mapping d))))]
+               (decl->datum (namespaced-symbol k) (stx-substs d mapping))))]
      `(sig ,@decls*)]
 
     [(#%pi-sig ([x:id A]) B)
@@ -76,15 +77,6 @@
      `(data ,name ....)]
     [(#%module-decl signature)
      `(module ,name : ,(sig->datum #'signature))]))
-
-;; [FreeIdTbl Id Sym] Stx -> Stx
-(define (subst-ids mapping stx)
-  (let traverse ([stx stx])
-    (cond
-      [(identifier? stx)
-       (free-id-table-ref mapping stx stx)]
-      [else
-       (traverse-stx/recur stx traverse)])))
 
 ;; like Hackett's type->string, but handles module-specific forms (like #%dot)
 (define (type->string/sig t)
