@@ -6,7 +6,7 @@
          expand-decl
          signature-subst
          signature-substs
-         sig-where)
+         sig-where/type)
 
 (require racket/syntax
          racket/function
@@ -367,8 +367,8 @@
 
 ;; ---------------------------------------------
 
-;; sig-where : Sig Symbol Type -> Sig
-(define (sig-where base sym type)
+;; sig-where/type : Sig Symbol Type -> Sig
+(define (sig-where/type base sym type)
   (syntax-parse base
     #:literal-sets [sig-literals]
     [(sig:#%sig internal-ids:hash-literal decls:hash-literal)
@@ -388,3 +388,4 @@
               (raise-syntax-error #f
                 "can't `where` a non-existent declaration"
                 base))))]))
+
