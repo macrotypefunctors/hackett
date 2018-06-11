@@ -13,6 +13,7 @@
              syntax/parse
              syntax/intdef
              hackett/private/util/stx
+             "util/stx-traverse.rkt"
              "rep/sig.rkt"
              "rep/sig-pretty.rkt"
              "check/expand-check.rkt"
@@ -30,6 +31,24 @@
   [(_ {~module name:id} {~module m:expr})
    #:with [m- sig] (sig⇒ #'m)
    #:with sig-str (sig->string #'sig 10)
+
+   #:do [(define (look-for-bool stx)
+           (define bx (box #f))
+           (let trav ([stx stx])
+             (if (and (identifier? stx)
+                      (eq? (syntax-e stx) 'Bool))
+                 (begin (set-box! bx stx) stx)
+                 (traverse-stx/recur stx trav)))
+           (unbox bx))
+
+         (define bool (look-for-bool #'sig))
+         (when bool
+           (printf "found bool in ~a\n" (syntax-e #'name))
+           (printf "def bool in type ns? ~a\n"
+                   (bound-identifier=? bool (type-namespace-introduce bool)))
+           (printf "def bool in sig ns? ~a\n"
+                   (bound-identifier=? bool (signature-namespace-introduce bool))))
+         ]
 
    #:with name- (generate-temporary #'name)
    #:with [([stx-id transformer] ...)

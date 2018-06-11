@@ -16,15 +16,20 @@
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
  "../util/stx-subst.rkt"
+ "../util/stx-traverse.rkt"
  "../util/hash.rkt"
  "../util/partition.rkt"
  "../namespace/reqprov.rkt"
+ "../namespace/namespace.rkt"
  (for-template "../rep/sig-literals.rkt"
                (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
                (prefix-in l: "../link/mod.rkt"))
- (for-template hackett/private/type-language
+ (for-template (except-in hackett/private/type-language
+                          type-namespace-introduce
+                          value-namespace-introduce
+                          ~type)
                (only-in hackett/private/base
                         make-typed-var-transformer)
                (only-in hackett/private/adt
@@ -49,6 +54,24 @@
   (λ (self stx)
     (define x- (module-var-transformer-internal-id self))
     (define sig (module-var-transformer-signature self))
+
+    (define (look-for-bool stx)
+      (define bx (box #f))
+      (let trav ([stx stx])
+        (if (and (identifier? stx)
+                 (eq? (syntax-e stx) 'Bool))
+            (begin (set-box! bx stx) stx)
+            (traverse-stx/recur stx trav)))
+      (unbox bx))
+
+    (define bool (look-for-bool sig))
+    (when bool
+      (printf "found bool in ~a\n" (syntax-e stx))
+      (printf "module var bool in type ns? ~a\n"
+              (bound-identifier=? bool (type-namespace-introduce bool)))
+      (printf "module var bool in sig ns? ~a\n"
+              (bound-identifier=? bool (signature-namespace-introduce bool))))
+
     ((make-variable-like-transformer
       (λ (id)
         (attach-sig (replace-stx-loc x- id)
