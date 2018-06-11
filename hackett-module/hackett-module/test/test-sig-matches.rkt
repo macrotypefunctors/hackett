@@ -118,3 +118,44 @@
           (val = : {N19108.Nat -> N19108.Nat -> B17106.Boool})
           (val + : {N19108.Nat -> N19108.Nat -> N19108.Nat})))))
 
+;; ------------------------------
+
+(check-sig-matches
+ (Π ((K54 : (sig
+              (type T)
+              (val lt : {T -> T -> Bool})
+              (val eq : {T -> T -> Bool}))))
+   (Π ((V60 : (sig (type T))))
+     (sig
+
+       ; only difference: specific type here
+       (type Dict = (List (Tuple Key Val)))
+
+       (val lookup : {Dict -> Key -> (Maybe Val)})
+       (val empty : Dict)
+       (type Key = Key.T)
+       (type Val = V60.T)
+       (val insert : {Dict -> Key -> Val -> Dict})
+       (module Key :
+         (sig
+           (type T = K54.T)
+           (val lt : {T -> T -> Bool})
+           (val eq : {T -> T -> Bool}))))))
+
+ (Π ((K158 : (sig
+               (type T)
+               (val lt : {T -> T -> Bool})
+               (val eq : {T -> T -> Bool}))))
+   (Π ((V162 : (sig (type T))))
+     (sig
+       (type Dict)
+       (val lookup : {Dict -> Key -> (Maybe Val)})
+       (val empty : Dict)
+       (type Key = Key.T)
+       (type Val = V162.T)
+       (val insert : {Dict -> Key -> Val -> Dict})
+       (module Key :
+         (sig
+           (type T = K158.T)
+           (val lt : {T -> T -> Bool})
+           (val eq : {T -> T -> Bool})))))))
