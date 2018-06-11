@@ -2,6 +2,7 @@
 (require
  "rep/sig-literals.rkt"
  "namespace/reqprov.rkt"
+ (only-in "dot/dot-t.rkt" reintroduce-#%dot)
  racket/pretty
  syntax/parse/define
  (except-in hackett/private/type-language
@@ -174,19 +175,15 @@
 
 (define-syntax-parser mod/acc
   [(_ [sig-entry/rev ...] [val-id/rev ...] [mod-id/rev ...])
-   #:with [sig-entry ...] (reverse (attribute sig-entry/rev))
+
    #:with [val-id ...] (reverse (attribute val-id/rev))
-   #:with [mod-id ...] (reverse (attribute mod-id/rev))
-   #:with s:sig #'(sig:sig sig-entry ...)
+   #:with [[val-sym/id ...] ...] #'[['val-id val-id] ...]
 
    #:do [(define ctor-ids/vals
            (for*/list ([val-id (in-list (attribute val-id))]
                        [val-val (in-value (syntax-local-value val-id (λ () #f)))]
                        #:when (data-constructor? val-val))
              (list val-id val-val)))]
-
-   #:with [[val-sym/id ...] ...] #'[['val-id val-id] ...]
-
    #:with [[ctor-sym/pat ...] ...]
    (for/list ([id/v (in-list ctor-ids/vals)])
      (match-define (list id v) id/v)
@@ -195,7 +192,21 @@
      (define make-match-pat (data-constructor-make-match-pat v))
      (list #`'#,id #`(l:make-pat-info #,(make-match-pat sub-ids) #,sub-ids)))
 
+   #:with [mod-id ...] (reverse (attribute mod-id/rev))
    #:with [[submod-sym/id ...] ...] #'[['mod-id/rev mod-id/rev] ...]
+
+   #:with [sig-entry ...] (reverse (attribute sig-entry/rev))
+   #:with s:sig #'(sig:sig sig-entry ...)
+   #:with s-reintro
+   (for/fold ([stx #'s.expansion])
+             ([mod-id (in-list (attribute mod-id))])
+     (define mod-internal-id
+       (hash-ref (sig-internal-ids stx)
+                 (namespaced:module (syntax-e mod-id))))
+     (reintroduce-#%dot mod-id
+                        mod-internal-id
+                        stx
+                        #f))
 
    #:with final-expression #'(let-values ([() s.residual])
                                (l:mod (hash val-sym/id ... ...)
@@ -205,7 +216,7 @@
    (syntax-property #'final-expression
      mod/acc-sig-prop
      (syntax-local-introduce
-      (attribute s.expansion)))]
+      (attribute s-reintro)))]
 
   [(head [ent/rev ...] [v/rev ...] [m/rev ...] defn rest-defn ...)
    #:with defn- (local-expand #'defn 'module mod-stop-ids)

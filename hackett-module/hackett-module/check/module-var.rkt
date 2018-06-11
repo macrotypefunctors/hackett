@@ -87,30 +87,33 @@
      (data-type-constructor/reintroducible-external-sym self))))
 
 
-;; ModulePath Signature -> Signature
+;; Id Signature -> Signature
 ;; Strengthen the signature, recursively replacing opaque types with
 ;; self references to preserve the identity of the original module.
 ;; `self-path` should be bound with the given signature, so that
 ;; the strengthened signature is valid for aliases of the path.
-(define (strengthen-signature self-path* signature)
+(define (strengthen-signature self-id signature)
   (syntax-parse signature
     #:literal-sets [sig-literals]
     [(sig:#%sig internal-ids:hash-literal
                 decls:hash-literal)
 
-     #:with self-path self-path*
+     ;#:with self-path self-path*
+     #:with self-type:dot-accessible-id/type self-id
+     #:with self-module:dot-accessible-id/module self-id
 
      #:do [(define (strengthen-decl key d)
              (syntax-parse d
                #:literal-sets [sig-literals]
                [(type-decl:#%type-decl (#%opaque))
-                #:with sym (namespaced-symbol key)
-                #'(type-decl (#%alias (#%dot_τ self-path sym)))]
+                ;#:with sym (namespaced-symbol key)
+                #:with d-id ((@ self-type.key->id) key)
+                #'(type-decl (#%alias d-id))]
 
                [(mod-decl:#%module-decl submod-signature)
-                #:with sym (namespaced-symbol key)
-                #:with strong-sig (strengthen-signature #'(#%dot_m self-path sym)
-                                                        #'submod-signature)
+                ; #:with sym (namespaced-symbol key)
+                #:with d-id ((@ self-module.key->id) key)
+                #:with strong-sig (strengthen-signature #'d-id #'submod-signature)
                 #'(mod-decl strong-sig)]
 
                [_ d]))]
