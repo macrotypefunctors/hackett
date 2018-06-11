@@ -105,9 +105,11 @@
 
     [pattern (mod:def-module ~! M:id body:expr)
              #:with [_ sig] (sig⇒ (module-namespace-introduce #'body))
-             #:with sig-entry #'(sig:module M : sig)
+             #:with key (namespaced:module (syntax-e #'M))
+             #:with M- (module-namespace-introduce #'M)
+             #:with sig-entry #'(sig:#%internal-decl key M- (#%module-decl sig))
              #:with [val-id ...] #'[]
-             #:with [mod-id ...] (module-namespace-introduce #'[M])
+             #:with [mod-id ...] #'[M-]
              #:with residual #'(values)]
 
     )

@@ -16,7 +16,7 @@
  (all-from-out hackett/base)
  (all-from-out hackett/prelude)
  (all-from-out "mod.rkt")
- (all-from-out "sig.rkt")
+ (except-out (all-from-out "sig.rkt") #%internal-decl)
  (all-from-out "def.rkt")
  (all-from-out "dot.rkt")
  (all-from-out "where.rkt"))

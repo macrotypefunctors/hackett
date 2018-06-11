@@ -6,6 +6,7 @@
          type
          data
          module
+         #%internal-decl
          def-signature)
 
 (require syntax/parse/define
@@ -30,15 +31,22 @@
 
 (define-syntax val #f)
 (define-syntax module #f)
+(define-syntax #%internal-decl #f)
 
 (begin-for-syntax
   (define-literal-set sig-surface-literals
     #:datum-literals [: =]
-    [val type data module])
+    [val type data module #%internal-decl])
 
   (define-syntax-class sig-entry
     #:attributes [[key 1] [id 1] [decl 1]]
     #:literal-sets [sig-surface-literals]
+
+    [pattern (#%internal-decl key0 internal-id decl0)
+      #:with [key ...] #'[key0]
+      #:with [id ...] #'[internal-id]
+      #:with [decl ...] #'[decl0]]
+
     [pattern (val x:id : {~type val-type:expr})
       #:with [key ...]  #`[#,(namespaced:value #'x)]
       #:with [id ...]   #'[x]
