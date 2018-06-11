@@ -18,7 +18,10 @@
  "../util/stx-subst.rkt"
  "../util/hash.rkt"
  "../util/partition.rkt"
+ "../namespace/reqprov.rkt"
  (for-template "../rep/sig-literals.rkt"
+               (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
+               (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
                (prefix-in l: "../link/mod.rkt"))
  (for-template hackett/private/type-language
@@ -48,7 +51,8 @@
     (define sig (module-var-transformer-signature self))
     ((make-variable-like-transformer
       (λ (id)
-        (attach-sig (replace-stx-loc x- id) sig)))
+        (attach-sig (replace-stx-loc x- id)
+                    (strengthen-signature id sig))))
      stx))
   #:property prop:dot-accessible
   (λ (self)
@@ -81,6 +85,44 @@
     (reintroducible-dot-type
      (data-type-constructor/reintroducible-module-sym self)
      (data-type-constructor/reintroducible-external-sym self))))
+
+
+;; ModulePath Signature -> Signature
+;; Strengthen the signature, recursively replacing opaque types with
+;; self references to preserve the identity of the original module.
+;; `self-path` should be bound with the given signature, so that
+;; the strengthened signature is valid for aliases of the path.
+(define (strengthen-signature self-path* signature)
+  (syntax-parse signature
+    #:literal-sets [sig-literals]
+    [(sig:#%sig internal-ids:hash-literal
+                decls:hash-literal)
+
+     #:with self-path self-path*
+
+     #:do [(define (strengthen-decl key d)
+             (syntax-parse d
+               #:literal-sets [sig-literals]
+               [(type-decl:#%type-decl (#%opaque))
+                #:with sym (namespaced-symbol key)
+                #'(type-decl (#%alias (#%dot_τ self-path sym)))]
+
+               [(mod-decl:#%module-decl submod-signature)
+                #:with sym (namespaced-symbol key)
+                #:with strong-sig (strengthen-signature #'(#%dot_m self-path sym)
+                                                        #'submod-signature)
+                #'(mod-decl strong-sig)]
+
+               [_ d]))]
+
+     #:with decls-
+     (for/hash ([(key decl) (in-hash (@ decls.value))])
+       (values key (strengthen-decl key decl)))
+
+     #'(sig internal-ids decls-)]
+
+    [(#%pi-sig . _) signature]))
+
 
 ;; Generates bindings needed to introduce a module with the
 ;; given name and signature.
@@ -193,7 +235,7 @@
   (define submod-bindings/stx (append* submod-bindingss/stx))
   (define submod-bindings/val
     (append* submod-internal-id-bindings/val submod-bindingss/val))
-  
+
   (define/syntax-parse [submod-key ...] submod-keys)
   (define/syntax-parse [submod-id ...] submod-ids)
   (define/syntax-parse [[submod-key/id ...] ...]
