@@ -31,12 +31,13 @@
   (define-simple-macro
     (define-path-syntax-class name #:attributes [attr:id ...] id-class)
     (define-syntax-class name
-      #:attributes [attr ...]
+      #:attributes [attr ... root]
       #:literals [#%dot]  ; module version only!
-      [pattern {~and :id ~! {~var || id-class}}]
+      [pattern {~and root:id ~! {~var || id-class}}]
       [pattern (#%dot ~! {~var mp dot-accessible-path/module} x:id)
         #:do [(define key (namespaced:module (syntax-e #'x)))]
-        #:with {~var || id-class} ((@ mp.key->id) key)]))
+        #:with {~var || id-class} ((@ mp.key->id) key)
+        #:with root (attribute mp.root)]))
 
   (define-path-syntax-class dot-accessible-path/module #:attributes [key->id]
     dot-accessible-id/module)
@@ -64,7 +65,7 @@
      (syntax-property
       module-id
       disappeared-use
-      (syntax-local-introduce #'m))]))
+      (syntax-local-introduce #'m.root))]))
 
 ;; ---------------------------------------------------------
 

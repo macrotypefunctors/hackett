@@ -41,7 +41,7 @@
       (syntax-property
        val-id
        disappeared-use
-       (syntax-local-introduce #'m))])
+       (syntax-local-introduce #'m.root))])
 
    ;; as a case-pattern expander
    (syntax-parser
@@ -57,4 +57,4 @@
       (syntax-property
        pat-id
        disappeared-use
-       (syntax-local-introduce #'m))])))
+       (syntax-local-introduce #'m.root))])))
