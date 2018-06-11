@@ -7,3 +7,6 @@
 
    (def x : Sub.T 4)))
 
+(def x : M.Sub.T M.x)
+(def y : Integer M.x)
+

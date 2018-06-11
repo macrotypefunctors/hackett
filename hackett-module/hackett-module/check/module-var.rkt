@@ -145,6 +145,7 @@
   (define type-expansion-ctx
     (make-type-expansion-context
      s-internal-ids
+     (hash-zip submod-keys submod-ids)
      (hash-zip alias-type-keys alias-type-ids)
      (hash-zip opaque-type-keys opaque-type-ids)
      (hash-zip data-type-keys data-type-ids)))
@@ -388,8 +389,9 @@
     (list (internal-definition-context-introduce intdef-ctx (first id/expr))
           (internal-definition-context-introduce intdef-ctx (second id/expr)))))
 
-;; [Hash Key Id] [Hash Key Id] [Hash Key Id] [Hash Key Id] -> IntDefCtx
+;; [Hash Key Id] [Hash Key Id] [Hash Key Id] [Hash Key Id] [Hash Key Id] -> IntDefCtx
 (define (make-type-expansion-context internal-ids
+                                     submod-key->id
                                      alias-key->id
                                      opaque-key->id
                                      data-key->id)
@@ -401,6 +403,13 @@
   ;;   bound in the intdef-ctx created here
   ;; create:
   ;;   transformers expanding to those ids in the rhs
+
+  (for ([(key submod-id) (in-hash submod-key->id)])
+    (define internal-id (hash-ref internal-ids key))
+    (syntax-local-bind-syntaxes
+     (list internal-id)
+     #`(make-rename-transformer (quote-syntax #,submod-id))
+     intdef-ctx))
 
   (for ([(key alias-id) (in-hash alias-key->id)])
     (define internal-id (hash-ref internal-ids key))
