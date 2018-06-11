@@ -31,7 +31,7 @@
    (syntax-property
     type-id
     disappeared-use
-    (syntax-local-introduce #'m))])
+    (syntax-local-introduce #'m.root))])
 
 (begin-for-syntax
 
