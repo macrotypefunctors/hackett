@@ -24,9 +24,11 @@
              syntax/parse
              syntax/kerncase
              syntax/id-set
+             explorer
              "rep/sig.rkt"
              "check/expand-check.rkt"
-             "namespace/namespace.rkt"))
+             "namespace/namespace.rkt"
+             "util/stx-traverse.rkt"))
 
 (provide
  (module-out mod))
@@ -209,6 +211,29 @@
                         mod-internal-id
                         stx
                         #f))
+
+
+   #:do [(define (look-for-bool stx)
+           (define bx (box #f))
+           (let trav ([stx stx])
+             (if (and (identifier? stx)
+                      (eq? (syntax-e stx) 'Bool))
+                 (begin (set-box! bx stx) stx)
+                 (traverse-stx/recur stx trav)))
+           (unbox bx))
+
+         (define bool (look-for-bool #'s-reintro))
+         (when bool
+           (printf "found bool in mod/acc\n")
+           (printf "mod/acc bool in type ns? ~a\n"
+                   (bound-identifier=? bool (type-namespace-introduce bool)))
+           (printf "mod/acc bool in sig ns? ~a\n"
+                   (bound-identifier=? bool (signature-namespace-introduce bool)))
+           (explore bool)
+           )
+         ]
+
+
 
    #:with final-expression #'(let-values ([() s.residual])
                                (l:mod (hash val-sym/id ... ...)
