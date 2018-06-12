@@ -1,5 +1,9 @@
 #lang hackett-module
 
+(require hackett-module/private/test)
+
+(define-binary-check ==! ([X] [(Eq X) (Show X)] X) == show)
+
 (def-signature TYPE (sig (type T)))
 
 (def-signature ORDERED
@@ -23,6 +27,20 @@
 
 (def-signature STRING-DICT
   (where DICT Key.T = String))
+
+;; ---------------------------------------------------------
+
+(def-module Test-Dict
+  (λ ([K : (where ORDERED T = Integer)])
+    (λ ([D : (where (where DICT Key.T = Integer) Val = String)])
+      (mod
+       (define-binary-check k==! K.eq show)
+       (def test
+         (do
+           {(D.lookup D.empty 4) ==! Nothing}
+           {(D.lookup (D.insert D.empty 4 "d") 4) ==! (Just "d")}
+           {(D.lookup (D.insert D.empty 4 "d") 5) ==! Nothing}
+           ))))))
 
 ;; ---------------------------------------------------------
 
@@ -70,4 +88,14 @@
             (where (where DICT Key.T = K.T) Val = V.T)))))
 
 ;; ---------------------------------------------------------
+
+(def-module Str (mod (type T String)))
+
+(def-module IntStrDict1
+  ((Make-Dict IntOrdered1) Str))
+
+(def-module Test-IntStrDict1
+  ((Test-Dict IntOrdered1) IntStrDict1))
+
+(test Test-IntStrDict1.test)
 

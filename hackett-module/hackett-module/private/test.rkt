@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide define-binary-check)
+(provide define-binary-check test)
 
 (require hackett)
 (require hackett
