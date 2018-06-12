@@ -106,12 +106,15 @@
                                               (syntax-local-introduce #'spec))]
 
     [pattern (mod:def-module ~! M:id body:expr)
-             #:with [_ sig] (sig⇒ (module-namespace-introduce #'body))
-             #:with key (namespaced:module (syntax-e #'M))
-             #:with M- (module-namespace-introduce #'M)
-             #:with sig-entry #'(sig:#%internal-decl key M- (#%module-decl sig))
+             #:with {~module M*} #'M
+             #:with {~module body*} #'body
+             #:with [_ sig] (sig⇒ #'body*)
+             #:do [(define key (namespaced:module (syntax-e #'M*)))]
+             #:with sig-entry #`(sig:#%internal-decl
+                                 #,(sig:internal-decl-struct
+                                    key #'M* #'(#%module-decl sig)))
              #:with [val-id ...] #'[]
-             #:with [mod-id ...] #'[M-]
+             #:with [mod-id ...] #'[M*]
              #:with residual #'(values)]
 
     )
