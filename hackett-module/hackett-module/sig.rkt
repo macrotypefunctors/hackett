@@ -6,8 +6,10 @@
          type
          data
          module
+         def-signature
+         ;; ---
          #%internal-decl
-         def-signature)
+         (for-syntax internal-decl-struct))
 
 (require syntax/parse/define
          "rep/sig-literals.rkt"
@@ -20,6 +22,7 @@
          (only-in hackett/private/adt data-constructor-spec)
          (only-in hackett/base type data)
          (for-syntax racket/base
+                     racket/match
                      syntax/parse
                      (only-in syntax/parse [attribute @])
                      syntax/parse/experimental/template
@@ -31,7 +34,11 @@
 
 (define-syntax val #f)
 (define-syntax module #f)
+
+;; (#%internal-decl #<internal-decl-struct>)
 (define-syntax #%internal-decl #f)
+(begin-for-syntax
+  (struct internal-decl-struct [key internal-id decl]))
 
 (begin-for-syntax
   (define-literal-set sig-surface-literals
@@ -42,10 +49,12 @@
     #:attributes [[key 1] [id 1] [decl 1]]
     #:literal-sets [sig-surface-literals]
 
-    [pattern (#%internal-decl key0 internal-id decl0)
-      #:with [key ...] #'[key0]
-      #:with [id ...] #'[internal-id]
-      #:with [decl ...] #'[decl0]]
+    [pattern (#%internal-decl intdeclstruct)
+      #:do [(match-define (internal-decl-struct key0 internal-id0 decl0)
+              (syntax-e #'intdeclstruct))]
+      #:with [key ...] #`[#,key0]
+      #:with [id ...] #`[#,internal-id0]
+      #:with [decl ...] #`[#,decl0]]
 
     [pattern (val {~value x:id} : {~type val-type:expr})
       #:with [key ...]  #`[#,(namespaced:value #'x)]
@@ -84,7 +93,7 @@
 
 
 (define-syntax-parser sig
-  [(_ ent ...)
+  [(_ {~value ent} ...)
    #:with entries:sig-entries ((make-syntax-introducer #t) #'[ent ...])
    (define keys (map syntax->datum (attribute entries.key)))
    #`(#%sig
