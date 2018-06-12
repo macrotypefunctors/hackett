@@ -47,18 +47,19 @@
       #:with [id ...] #'[internal-id]
       #:with [decl ...] #'[decl0]]
 
-    [pattern (val x:id : {~type val-type:expr})
+    [pattern (val {~value x:id} : {~type val-type:expr})
       #:with [key ...]  #`[#,(namespaced:value #'x)]
       #:with [id ...]   #'[x]
       #:with [decl ...] #'[(#%val-decl val-type)]]
     [pattern (data {~type X:id} c:data-constructor-spec ...)
       #:with X-key (namespaced:type (attribute X))
       #:with [c-key ...] (map namespaced:value (attribute c.tag))
+      #:with [c-tag ...] (map value-namespace-introduce (attribute c.tag))
       #:with [c-type ...] (type-namespace-introduce
                            (template [(?->* c.arg ... X) ...]))
       #:with [[key id decl] ...]
-      #`[[X-key X (#%type-decl (#%data c.tag ...))]
-         [c-key c.tag (#%constructor-decl c-type)]
+      #`[[X-key X (#%type-decl (#%data c-tag ...))]
+         [c-key c-tag (#%constructor-decl c-type)]
          ...]]
     [pattern (type {~type X:id})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
@@ -83,7 +84,7 @@
 
 
 (define-syntax-parser sig
-  [(_ {~value ent} ...)
+  [(_ ent ...)
    #:with entries:sig-entries ((make-syntax-introducer #t) #'[ent ...])
    (define keys (map syntax->datum (attribute entries.key)))
    #`(#%sig
