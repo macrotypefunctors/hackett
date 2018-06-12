@@ -99,8 +99,8 @@
    (internal-definition-context-track
     ctx
     (attach-sig #'(λ (x--)
-                    (define-values [val-id ...]
-                      (values val-expr ...))
+                    (define val-id val-expr)
+                    ...
                     body-)
                 #'(#%pi-sig ([x-- A.expansion]) B*)))])
 
