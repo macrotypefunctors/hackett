@@ -17,7 +17,12 @@
                      (only-in syntax/parse [attribute @])))
 
 (begin-for-syntax
-  (define disappeared-use 'disappeared-use))
+  (define disappeared-use 'disappeared-use)
+  (define (add-disappeared-use stx . ids)
+    (define old (or (syntax-property stx disappeared-use) '()))
+    (syntax-property stx
+                     disappeared-use
+                     (append (map syntax-local-introduce ids) old))))
 
 (define-syntax-parser #%dot
   [(_ {~module m:dot-accessible-path/type} ~! x:id)
@@ -28,10 +33,9 @@
    (format "~a is not bound to a type within ~a"
            (syntax-e #'x)
            (syntax->datum #'m))
-   (syntax-property
+   (add-disappeared-use
     type-id
-    disappeared-use
-    (syntax-local-introduce #'m.root))])
+    #'m.root)])
 
 (begin-for-syntax
 
