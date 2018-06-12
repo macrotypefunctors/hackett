@@ -24,7 +24,7 @@
              syntax/parse
              syntax/kerncase
              syntax/id-set
-             explorer
+             ; explorer
              "rep/sig.rkt"
              "check/expand-check.rkt"
              "namespace/namespace.rkt"
@@ -229,7 +229,7 @@
                    (bound-identifier=? bool (type-namespace-introduce bool)))
            (printf "mod/acc bool in sig ns? ~a\n"
                    (bound-identifier=? bool (signature-namespace-introduce bool)))
-           (explore bool)
+           ; (explore bool)
            )
          ]
 
