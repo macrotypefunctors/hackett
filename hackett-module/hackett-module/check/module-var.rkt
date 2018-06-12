@@ -16,7 +16,6 @@
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
  "../util/stx-subst.rkt"
- "../util/stx-traverse.rkt"
  "../util/hash.rkt"
  "../util/partition.rkt"
  "../namespace/reqprov.rkt"
@@ -54,24 +53,6 @@
   (λ (self stx)
     (define x- (module-var-transformer-internal-id self))
     (define sig (module-var-transformer-signature self))
-
-    (define (look-for-bool stx)
-      (define bx (box #f))
-      (let trav ([stx stx])
-        (if (and (identifier? stx)
-                 (eq? (syntax-e stx) 'Bool))
-            (begin (set-box! bx stx) stx)
-            (traverse-stx/recur stx trav)))
-      (unbox bx))
-
-    (define bool (look-for-bool sig))
-    (when bool
-      (printf "found bool in ~a\n" (syntax-e stx))
-      (printf "module var bool in type ns? ~a\n"
-              (bound-identifier=? bool (type-namespace-introduce bool)))
-      (printf "module var bool in sig ns? ~a\n"
-              (bound-identifier=? bool (signature-namespace-introduce bool))))
-
     ((make-variable-like-transformer
       (λ (id)
         (attach-sig (replace-stx-loc x- id)
