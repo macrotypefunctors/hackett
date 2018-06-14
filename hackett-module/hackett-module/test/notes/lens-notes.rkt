@@ -71,7 +71,7 @@
            (s1 cca (s2 (g1 cca) b)))))])
    ))
 
-#;
+
 (def-module Lens1*
   (seal Lens1 :> LENS))
 
@@ -126,6 +126,10 @@
      [[(L l1) (L l2)]
       (L {l1 |.| l2})])))
 
+
+(def-module Lens2*
+  (seal Lens2 :> LENS))
+
 ;; ---------------------------------------------------------
 
 (def-module Lens3
@@ -157,13 +161,13 @@
      [[(L l) ca a->b] (case (l ca)
                         [(Tuple a f) (f (a->b a))])])
 
-   (: lens-thrush (∀ [CCA CCB CA CB A B]
-                     {(Lens CCA CCB CA CB)
-                      ->
-                      (Lens CA CB A B)
-                      ->
-                      (Lens CCA CCB A B)}))
-   (defn lens-thrush
+   (: thrush (∀ [CCA CCB CA CB A B]
+                {(Lens CCA CCB CA CB)
+                 ->
+                 (Lens CA CB A B)
+                 ->
+                 (Lens CCA CCB A B)}))
+   (defn thrush
      [[(L l1) (L l2)]
       (L (λ (cca)
            (case (l1 cca)
@@ -172,4 +176,8 @@
                 [(Tuple a b->cb)
                  (Tuple a {cb->ccb |.| b->cb})])])))])
    ))
+
+
+(def-module Lens3*
+  (seal Lens3 :> LENS))
 

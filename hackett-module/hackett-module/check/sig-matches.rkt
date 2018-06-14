@@ -11,9 +11,12 @@
          syntax/parse
          syntax/id-set
          (only-in syntax/parse [attribute @])
+         syntax/parse/experimental/template
          threading
          hackett/private/typecheck
          hackett/private/util/stx
+         (for-template (only-in hackett/private/type-alias
+                                make-alias-transformer))
          )
 
 ;; A Signature is one of:
@@ -138,14 +141,15 @@
           (#%constructor-decl _)}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
-    ;; TODO: deal with possible type parameters for opaque and data types
-    [{~or (#%type-decl (#%opaque []))
-          (#%type-decl (#%data [] c ...))}
+    [{~or (#%type-decl (#%opaque [x ...]))
+          (#%type-decl (#%data [x ...] c ...))}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
     ;; TODO: deal with possible type parameters for aliases
-    [(#%type-decl (#%alias [] t))
-     (define rhs #'(make-variable-like-transformer (quote-syntax t)))
+    [(#%type-decl (#%alias [x ...] t))
+     (define rhs #'(make-alias-transformer (list (quote-syntax x) ...)
+                                           (quote-syntax t)
+                                           #f))
      (syntax-local-bind-syntaxes (list id) rhs ctx)]
 
     [(#%module-decl signature)
@@ -165,17 +169,27 @@
     [[(#%constructor-decl A) (#%constructor-decl B)]
      (type-equal? #'A #'B)]
 
-    ;; TODO: deal with possible type parameters for opaque types
-    [[(#%type-decl _) (#%type-decl (#%opaque []))]
-     #true]
+    ;; anything matches an opaque type as long as it has the
+    ;; same number of type arguments
+    [[(#%type-decl (~or (#%opaque [x ...])
+                        (#%alias [x ...] _)
+                        (#%data [x ...] . _)))
+      (#%type-decl (#%opaque [y ...]))]
+     (= (length (@ x)) (length (@ y)))]
     ;; TODO: deal with possible type parameters for aliases
-    [[(#%type-decl (#%alias [] A)) (#%type-decl (#%alias [] B))]
-     (type-equal? #'A #'B)]
-    [[(#%type-decl (#%data [] c-A ...)) (#%type-decl (#%data [] c-B ...))]
-     ; use set comparison because order doesn't matter
-     (free-id-set=?
-      (immutable-free-id-set (@ c-A))
-      (immutable-free-id-set (@ c-B)))]
+    [[(#%type-decl (#%alias [x ...] A)) (#%type-decl (#%alias [y ...] B))]
+     (and
+      (= (length (@ x)) (length (@ y)))
+      (type-equal? (template (?#%type:forall* [x ...] A))
+                   (template (?#%type:forall* [y ...] B))))]
+    [[(#%type-decl (#%data [x ...] c-A ...))
+      (#%type-decl (#%data [y ...] c-B ...))]
+     (and
+      (= (length (@ x)) (length (@ y)))
+      ; use set comparison because order doesn't matter
+      (free-id-set=?
+       (immutable-free-id-set (@ c-A))
+       (immutable-free-id-set (@ c-B))))]
 
     [[(#%module-decl A) (#%module-decl B)]
      (sig-matches? #'A #'B)]
