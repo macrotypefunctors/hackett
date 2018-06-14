@@ -138,12 +138,13 @@
           (#%constructor-decl _)}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
-    [{~or (#%type-decl (#%opaque))
-          (#%type-decl (#%data c ...))}
+    ;; TODO: deal with possible type parameters for opaque and data types
+    [{~or (#%type-decl (#%opaque []))
+          (#%type-decl (#%data [] c ...))}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
     ;; TODO: deal with possible type parameters for aliases
-    [(#%type-decl (#%alias () t))
+    [(#%type-decl (#%alias [] t))
      (define rhs #'(make-variable-like-transformer (quote-syntax t)))
      (syntax-local-bind-syntaxes (list id) rhs ctx)]
 
@@ -164,12 +165,13 @@
     [[(#%constructor-decl A) (#%constructor-decl B)]
      (type-equal? #'A #'B)]
 
-    [[(#%type-decl _) (#%type-decl (#%opaque))]
+    ;; TODO: deal with possible type parameters for opaque types
+    [[(#%type-decl _) (#%type-decl (#%opaque []))]
      #true]
     ;; TODO: deal with possible type parameters for aliases
-    [[(#%type-decl (#%alias () A)) (#%type-decl (#%alias () B))]
+    [[(#%type-decl (#%alias [] A)) (#%type-decl (#%alias [] B))]
      (type-equal? #'A #'B)]
-    [[(#%type-decl (#%data c-A ...)) (#%type-decl (#%data c-B ...))]
+    [[(#%type-decl (#%data [] c-A ...)) (#%type-decl (#%data [] c-B ...))]
      ; use set comparison because order doesn't matter
      (free-id-set=?
       (immutable-free-id-set (@ c-A))

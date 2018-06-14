@@ -111,10 +111,14 @@
      #:do [(define (strengthen-decl key d)
              (syntax-parse d
                #:literal-sets [sig-literals]
-               [(type-decl:#%type-decl (#%opaque))
+               [(type-decl:#%type-decl (#%opaque []))
                 ;#:with sym (namespaced-symbol key)
                 #:with d-id ((@ self-type.key->id) key)
-                #'(type-decl (#%alias () d-id))]
+                #'(type-decl (#%alias [] d-id))]
+               [(type-decl:#%type-decl (#%opaque [x:id ...+]))
+                ;#:with sym (namespaced-symbol key)
+                #:with d-id ((@ self-type.key->id) key)
+                #'(type-decl (#%alias [x ...] (d-id x ...)))]
 
                [(mod-decl:#%module-decl submod-signature)
                 ; #:with sym (namespaced-symbol key)
@@ -286,12 +290,13 @@
 
   ;; generate #%type:con's for data types
 
+  ;; TODO: generate the correct bindings for datatypes with type parameters
   (define data-type-bindings
     (for/list ([key (in-list data-type-keys)]
                [id (in-list data-type-ids)])
       ;; get the constructors
       (define/syntax-parse
-        ({~literal #%type-decl} ({~literal #%data} c ...))
+        ({~literal #%type-decl} ({~literal #%data} [] c ...))
         (hash-ref s-decls key))
 
       ;; find the "new" constructor ids for the module being introduced

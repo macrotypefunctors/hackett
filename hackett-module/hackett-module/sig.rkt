@@ -67,13 +67,17 @@
       #:with [c-type ...] (type-namespace-introduce
                            (template [(?->* c.arg ... X) ...]))
       #:with [[key id decl] ...]
-      #`[[X-key X (#%type-decl (#%data c-tag ...))]
+      #`[[X-key X (#%type-decl (#%data [] c-tag ...))]
          [c-key c-tag (#%constructor-decl c-type)]
          ...]]
     [pattern (type {~type X:id})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
-      #:with [decl ...] #'[(#%type-decl (#%opaque))]]
+      #:with [decl ...] #'[(#%type-decl (#%opaque []))]]
+    [pattern (type {~type (X:id arg:id ...)})
+      #:with [key ...]  #`[#,(namespaced:type #'X)]
+      #:with [id ...]   #'[X]
+      #:with [decl ...] #'[(#%type-decl (#%opaque [arg ...]))]]
     [pattern (type {~type X:id} = {~type alias-type:expr})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]

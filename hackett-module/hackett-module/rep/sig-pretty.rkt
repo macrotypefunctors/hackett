@@ -73,10 +73,15 @@
     [(#%type-decl (#%alias () t)) `(type ,name = ,(type->string/sig #'t))]
     [(#%type-decl (#%alias (x ...+) t))
      `(type (,name ,@(syntax->datum #'(x ...))) = ,(type->string/sig #'t))]
-    [(#%type-decl (#%opaque)) `(type ,name)]
-    [(#%type-decl (#%data c ...))
+    [(#%type-decl (#%opaque ())) `(type ,name)]
+    [(#%type-decl (#%opaque (x ...+)))
+     `(type (,name ,@(syntax->datum #'(x ...))))]
+    [(#%type-decl (#%data () c ...))
      ;; TODO: use the types of the constructors to print the variants
      `(data ,name ....)]
+    [(#%type-decl (#%data (x ...+) c ...))
+     ;; TODO: use the types of the constructors to print the variants
+     `(data (,name ,@(syntax->datum #'(x ...))) ....)]
     [(#%module-decl signature)
      `(module ,name : ,(sig->datum #'signature))]))
 
