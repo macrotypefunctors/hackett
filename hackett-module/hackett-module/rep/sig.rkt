@@ -95,31 +95,13 @@
 
 ;; ---------------------------------------------
 
-;; Id Key PartialDecl IntDefCtx -> [Signature -> SignatureStx]
-;; returns function to reintroduce all dots found in decl
-;[Listof [List Id ModulePath]]
-(define (syntax-local-declare-decl init-id init-decl init-path intdef-ctx)
-  (define id/mps
-    (syntax-local-declare-decl/acc init-id init-decl intdef-ctx init-path))
-
-  (λ (signature)
-    (for/fold ([stx signature])
-              ([id/mp (in-list id/mps)])
-      (match-define (list id mp) id/mp)
-      (define id-
-        (internal-definition-context-introduce
-         intdef-ctx
-         id))
-      (reintroduce-#%dot id- mp stx intdef-ctx))))
-
-;; Id Key PartialDecl IntDefCtx -> [Listof [List Id ModulePath]]
-;; declares that the decl exists without binding what
-;; its "equal to".
+;; Id PartialDecl ModulePath IntDefCtx -> [Signature -> SignatureStx]
+;; declares that the decl exists without binding what its "equal to".
 ;; the root of `path-to-id` should already have the scope introduced
 ;; for the context its expanding to.
-;; returns the ids and prefixes to use when reintroducing module
-;; bindings in the decls.
-(define (syntax-local-declare-decl/acc id decl intdef-ctx path-to-id)
+;; returns a function to call on an expanded signature after fully
+;; expanding it.
+(define (syntax-local-declare-decl id decl path-to-id intdef-ctx)
   (syntax-parse decl
     #:context 'syntax-local-declare-decl
     #:literal-sets [sig-literals]
@@ -127,32 +109,27 @@
           (#%val-decl . _)
           (#%constructor-decl . _)}
      (syntax-local-bind-syntaxes (list id) #f intdef-ctx)
-     '()]
+     identity]
 
     [(#%module-decl (#%pi-sig . _))
      (syntax-local-bind-syntaxes (list id) #f intdef-ctx)
-     '()]
+     identity]
 
     [(#%module-decl (#%sig internal-ids:hash-literal
                            decls:hash-literal))
 
-     (define unique-sym
-       (gensym (syntax-e id)))
-
-     (define-values [keys tmp-ids nested-id/mpss]
-       (for/lists (keys tmp-ids id/rpss)
+     (define-values [keys tmp-ids reintros]
+       (for/lists (keys tmp-ids reintros)
                   ([(local-key decl) (in-hash (@ decls.value))])
          (define tmp-id
            (generate-temporary/1num (namespaced-symbol local-key)))
          (define local-path
            #`(#%dot_m #,path-to-id #,(namespaced-symbol local-key)))
-         (define nested-id/mps
-           (syntax-local-declare-decl/acc tmp-id decl intdef-ctx local-path))
-         (values local-key tmp-id nested-id/mps)))
+         (define nested-reintro
+           (syntax-local-declare-decl tmp-id decl local-path intdef-ctx))
+         (values local-key tmp-id nested-reintro)))
 
-     (define id/mps
-       (cons (list id path-to-id)
-             (append* nested-id/mpss)))
+     (define reintro (apply compose reintros))
 
      (define/syntax-parse [key ...] keys)
      (define/syntax-parse [tmp-id ...] tmp-ids)
@@ -161,11 +138,15 @@
      (syntax-local-bind-syntaxes
       (list id)
       #`(declared-module-var
-         '#,unique-sym
+         '#,(gensym (syntax-e id))
          (hash key/tmp-id ... ...))
       intdef-ctx)
 
-     id/mps]))
+     (λ (stx)
+       (define id- (internal-definition-context-introduce intdef-ctx id))
+       (define stx- (reintro stx))
+       (reintroduce-#%dot id- path-to-id stx- intdef-ctx))]))
+
 
 (struct declared-module-var [module-sym key->tmp-id]
   #:property prop:dot-origin
@@ -303,7 +284,7 @@
            #:with [x- ...] (map intro (attribute x))
            #:with {~var alias-type- (type intdef-ctx*)}
            (intro #'alias-type)
-   
+
            #:attr expansion (~>> (syntax/loc/props this-syntax
                                    (type-decl (alias [x- ...] alias-type-.expansion)))
                                  (internal-definition-context-track intdef-ctx*))
@@ -412,4 +393,3 @@
               (raise-syntax-error #f
                 "can't `where` a non-existent declaration"
                 base))))]))
-
