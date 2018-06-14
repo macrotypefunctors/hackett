@@ -123,19 +123,8 @@
                  ->
                  (Lens CCA CCB A B)}))
    (defn thrush
-     [[l1 l2]
-      (let ([g1 (get l1)]
-            [g2 (get l2)]
-            [s1 (set l1)]
-            [s2 (set l2)])
-        ;; g1 : CCA -> CA
-        ;; g2 : CA -> A
-        ;; s1 : CCA -> CB -> CCB
-        ;; s2 : CA -> B -> CB
-        (make-lens
-         {g2 |.| g1}
-         (λ [cca b]
-           (s1 cca (s2 (g1 cca) b)))))])))
+     [[(L l1) (L l2)]
+      (L {l1 |.| l2})])))
 
 ;; ---------------------------------------------------------
 
