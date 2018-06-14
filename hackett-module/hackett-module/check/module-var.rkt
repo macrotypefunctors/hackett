@@ -31,6 +31,8 @@
                           ~type)
                (only-in hackett/private/base
                         make-typed-var-transformer)
+               (only-in hackett/private/type-alias
+                        make-alias-transformer)
                (only-in hackett/private/adt
                         data-constructor
                         [type-constructor data-type-constructor])))
@@ -255,12 +257,14 @@
   (define alias-type-bindings
     (for/list ([key (in-list alias-type-keys)]
                [id (in-list alias-type-ids)])
-      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} () t))
+      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} [x ...] t))
         (hash-ref s-decls key))
       (define/syntax-parse t*
         (stx-substs #'t internal->introduced))
       (list id
-            #'(make-variable-like-transformer (quote-syntax t*)))))
+            #'(make-alias-transformer (list (quote-syntax x) ...)
+                                      (quote-syntax t*)
+                                      #f))))
 
   (define/syntax-parse [alias-key ...] alias-type-keys)
   (define/syntax-parse [alias-id ...] alias-type-ids)
@@ -462,13 +466,11 @@
      #`(make-rename-transformer (quote-syntax #,submod-id))
      intdef-ctx))
 
-  ;; TODO: considering that aliases might have type parameters, should
-  ;;       this generate a rename-transformer instead?
   (for ([(key alias-id) (in-hash alias-key->id)])
     (define internal-id (hash-ref internal-ids key))
     (syntax-local-bind-syntaxes
      (list internal-id)
-     #`(make-variable-like-transformer (quote-syntax #,alias-id))
+     #`(make-rename-transformer (quote-syntax #,alias-id))
      intdef-ctx))
 
   (for ([(key opaque-id) (in-hash opaque-key->id)])

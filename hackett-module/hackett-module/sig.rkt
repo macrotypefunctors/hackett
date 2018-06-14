@@ -77,7 +77,11 @@
     [pattern (type {~type X:id} = {~type alias-type:expr})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
-      #:with [decl ...] #'[(#%type-decl (#%alias () alias-type))]]
+      #:with [decl ...] #'[(#%type-decl (#%alias [] alias-type))]]
+    [pattern (type {~type (X:id arg:id ...)} = {~type alias-type:expr})
+      #:with [key ...]  #`[#,(namespaced:type #'X)]
+      #:with [id ...]   #'[X]
+      #:with [decl ...] #'[(#%type-decl (#%alias [arg ...] alias-type))]]
     [pattern (module {~module X:id} : {~signature signature:expr})
       #:with [key ...]  #`[#,(namespaced:module #'X)]
       #:with [id ...]   #'[X]
