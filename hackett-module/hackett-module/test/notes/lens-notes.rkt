@@ -1,5 +1,7 @@
 #lang hackett-module
 
+(require hackett/data/identity)
+
 (type Num Double)
 
 (data (Const a b) (Const a))
@@ -134,3 +136,51 @@
          {g2 |.| g1}
          (λ [cca b]
            (s1 cca (s2 (g1 cca) b)))))])))
+
+;; ---------------------------------------------------------
+
+(def-module Lens3
+  (mod
+   (data (Lens CA CB A B)
+     (L {CA -> (Tuple A {B -> CB})}))
+
+   (: make-lens (∀ [CA CB A B]
+                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
+   (defn make-lens
+     [[get set]
+      (L (λ [ca] (Tuple (get ca) (set ca))))])
+
+   (: get (∀ [CA CB A B]
+             {(Lens CA CB A B) -> CA -> A}))
+   (defn get
+     [[(L l) ca] (case (l ca)
+                   [(Tuple a _) a])])
+
+   (: set (∀ [CA CB A B]
+             {(Lens CA CB A B) -> CA -> B -> CB}))
+   (defn set
+     [[(L l) ca] (case (l ca)
+                   [(Tuple _ f) f])])
+
+   (: modify (∀ [CA CB A B]
+                {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
+   (defn modify
+     [[(L l) ca a->b] (case (l ca)
+                        [(Tuple a f) (f (a->b a))])])
+
+   (: lens-thrush (∀ [CCA CCB CA CB A B]
+                     {(Lens CCA CCB CA CB)
+                      ->
+                      (Lens CA CB A B)
+                      ->
+                      (Lens CCA CCB A B)}))
+   (defn lens-thrush
+     [[(L l1) (L l2)]
+      (L (λ (cca)
+           (case (l1 cca)
+             [(Tuple ca cb->ccb)
+              (case (l2 ca)
+                [(Tuple a b->cb)
+                 (Tuple a {cb->ccb |.| b->cb})])])))])
+   ))
+
