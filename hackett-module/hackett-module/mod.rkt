@@ -93,15 +93,13 @@
              ;; TODO: attach the other things
              #:with residual #'(values)]
 
-    [pattern (hkt:type ~! spec rhs:expr)
-             #:fail-unless (identifier? #'spec)
-             "type aliases with arguments not allowed in modules"
+    [pattern (hkt:type ~! {~and spec {~or x:id (x:id . _)}} rhs:expr)
              #:with sig-entry #'(sig:type spec = rhs)
              #:with [val-id ...] #'[]
              #:with [mod-id ...] #'[]
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
-                                              (syntax-local-introduce #'spec))]
+                                              (syntax-local-introduce #'x))]
 
     [pattern (mod:def-module ~! M:id body:expr)
              #:with {~module M*} #'M

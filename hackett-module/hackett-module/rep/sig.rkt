@@ -289,13 +289,23 @@
            #:attr residual (residual #'[constr-type.residual expansion]
                                      #'constr-decl)]
 
-  ;; (#%type-decl (#%alias (id ...) type))
-  ;; TODO: handle expansion with type parameters for aliases
+  ;; (#%type-decl (#%alias [id ...] type))
   [pattern (type-decl:#%type-decl
-            (alias:#%alias () (~var alias-type (type intdef-ctx))))
-           #:attr expansion (syntax/loc/props this-syntax
-                              (type-decl (alias () alias-type.expansion)))
-           #:attr residual (residual #'[alias-type.residual expansion]
+            (alias:#%alias [x:id ...] alias-type:expr))
+
+           ;; create a context where the xs are bound
+           #:do [(define intdef-ctx* (syntax-local-make-definition-context intdef-ctx))
+                 (define (intro stx)
+                   (internal-definition-context-introduce intdef-ctx* stx))
+                 (syntax-local-bind-syntaxes (attribute x) #f intdef-ctx*)]
+
+           #:with [x- ...] (map intro (attribute x))
+           #:with {~var alias-type- (type intdef-ctx*)} #'alias-type
+   
+           #:attr expansion (~>> (syntax/loc/props this-syntax
+                                   (type-decl (alias [x- ...] alias-type-.expansion)))
+                                 (internal-definition-context-track intdef-ctx*))
+           #:attr residual (residual #'[alias-type-.residual expansion]
                                      #'type-decl)]
 
   ;; (#%type-decl (#%opaque))
