@@ -50,7 +50,41 @@
 
 ;; ---------------------------------------------------------
 
-(def-module Pong
+(def-module Tuple-Lens
+  (λ ([L : LENS])
+    (mod
+     ;; (C X) = (Tuple X Y)
+     (: tuple-fst-lens (∀ [X1 X2 Y] (L.Lens (Tuple X1 Y) (Tuple X2 Y) X1 X2)))
+     (def tuple-fst-lens
+       (L.make-lens
+        (λ* [[(Tuple fst snd)] fst])
+        (λ* [[(Tuple fst snd) fst] (Tuple fst snd)])))
+
+     ;; (C Y) = (Tuple X Y)
+     (: tuple-snd-lens (∀ [X Y1 Y2] (L.Lens (Tuple X Y1) (Tuple X Y2) Y1 Y2)))
+     (def tuple-snd-lens
+       (L.make-lens
+        (λ* [[(Tuple fst snd)] snd])
+        (λ* [[(Tuple fst snd) snd] (Tuple fst snd)])))
+
+     (def snd-of-fst-lens (L.thrush tuple-fst-lens tuple-snd-lens))
+
+     (def test
+       (do
+         {(L.get snd-of-fst-lens (Tuple (Tuple 39 "a") (Tuple 51 "b")))
+          ==!
+          "a"}
+
+         {(L.set snd-of-fst-lens (Tuple (Tuple 39 "a") (Tuple 51 "b")) "aaay!")
+          ==!
+          (Tuple (Tuple 39 "aaay!") (Tuple 51 "b"))}
+
+         {(L.set snd-of-fst-lens (Tuple (Tuple 39 "a") (Tuple 51 "b"))
+                 (List 3 1 4 1 6 1 7))
+          ==!
+          (Tuple (Tuple 39 (List 3 1 4 1 6 1 7)) (Tuple 51 "b"))})))))
+
+(def-module Pong-Lens
   (λ ([Lens : LENS])
     (mod
      (data Dir (Dir Num Num))
@@ -230,9 +264,13 @@
 
 ;; ---------------------------------------------------------
 
-(def-module Pong1 (Pong Lens1))
-(def-module Pong2 (Pong Lens2))
-(def-module Pong3 (Pong Lens3))
+(def-module Tuple-Lens1 (Tuple-Lens Lens1))
+(def-module Tuple-Lens2 (Tuple-Lens Lens2))
+(def-module Tuple-Lens3 (Tuple-Lens Lens3))
+(def-module Pong-Lens1 (Pong-Lens Lens1))
+(def-module Pong-Lens2 (Pong-Lens Lens2))
+(def-module Pong-Lens3 (Pong-Lens Lens3))
 
-(test (do Pong1.test Pong2.test Pong3.test))
+(test (do Tuple-Lens1.test Tuple-Lens2.test Tuple-Lens3.test
+          Pong-Lens1.test Pong-Lens2.test Pong-Lens3.test))
 
