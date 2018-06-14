@@ -1,6 +1,8 @@
 #lang hackett-module
 
-(require hackett/data/identity)
+(require hackett/data/identity
+         syntax/parse/define
+         (only-in racket/base begin |...|))
 
 (type Num Double)
 
@@ -9,8 +11,23 @@
   [map (λ [f (Const a)]
          (Const a))])
 
+(defn dneg
+  [[x] (d- 0e1 x)])
+(defn dabs
+  [[x] (if (d< x 0e1) (dneg x) x)])
+
 (defn get-const : (∀ [a b] {(Const a b) -> a})
   [[(Const a)] a])
+
+(define-simple-macro
+  (def-data-lenses Lens (Variant name-field:id |...|))
+  (begin
+    (def name-field
+      (Lens.make-lens
+       (λ* [[(Variant name-field |...|)] name-field])
+       (λ* [[(Variant name-field |...|) name-field]
+            (Variant name-field |...|)])))
+    |...|))
 
 ;; ---------------------------------------------------------
 
@@ -28,6 +45,35 @@
                      (Lens CA CB A B)
                      ->
                      (Lens CCA CCB A B)}))))
+
+;; ---------------------------------------------------------
+
+(def-module Pong
+  (λ ([Lens : LENS])
+    (mod
+     (data Dir (Dir Num Num))
+     (data Pos (Pos Num Num))
+     (data Ball (Ball Pos Dir))
+     (data Player (Player Pos Dir))
+     (data Score (Score Integer Integer))
+     (data Game (Game Score Player Player Ball))
+     (def-data-lenses Lens
+       (Game game-score game-player1 game-player2 game-ball))
+     (def-data-lenses Lens
+       (Ball ball-pos ball-vel))
+     (def-data-lenses Lens
+       (Dir dir-dx dir-dy))
+     (defn reflect-left-wall
+       [[g]
+        (Lens.modify (Lens.thrush game-ball (Lens.thrush ball-vel dir-dx))
+                     g
+                     dabs)])
+     (defn reflect-right-wall
+       [[g]
+        (Lens.modify (Lens.thrush game-ball (Lens.thrush ball-vel dir-dx))
+                     g
+                     {dneg |.| dabs})])
+     )))
 
 ;; ---------------------------------------------------------
 
@@ -74,24 +120,6 @@
 
 (def-module Lens1*
   (seal Lens1 :> LENS))
-
-;; ---------------------------------------------------------
-
-#;
-(def-module Pong
-  (λ ([Lens : LENS])
-    (mod
-     (data Dir (Vel Num Num))
-     (data Pos (Pos Num Num))
-     (data Ball (Ball Pos Dir))
-     (data Player (Player Pos Dir))
-     (data Score (Score Integer Integer))
-     (data Game (Game Score Player Player Ball))
-     (def reflect-left-wall
-       (Lens.modify (Lens.thrush game-ball ball-dir dir-dx) abs))
-     (def reflect-right-wall
-       (Lens.modify (Lens.thrush game-ball ball-dir dir-dx) (thrush abs neg)))
-     )))
 
 ;; ---------------------------------------------------------
 
