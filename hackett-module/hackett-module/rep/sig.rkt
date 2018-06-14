@@ -232,7 +232,8 @@
                        (syntax-local-declare-decl id decl id- intdef-ctx*))))]
 
            #:with internal-ids- (intro #'internal-ids)
-           #:with [{~var decl- (expanded-decl intdef-ctx*)} ...] (attribute decls.values)
+           #:with [{~var decl- (expanded-decl intdef-ctx*)} ...]
+           (map intro (attribute decls.values))
            #:with decls-expansion-
            (reintro-dots
             (hash-zip (attribute decls.keys) (attribute decl-.expansion)))
@@ -257,7 +258,7 @@
            #:do [(define reintro-dots
                    (syntax-local-declare-decl #'x #'(#%module-decl A.expansion) #'x-- intdef-ctx*))]
 
-           #:with {~var B* (sig intdef-ctx*)} #'B
+           #:with {~var B* (sig intdef-ctx*)} (intro #'B)
            #:with B** (reintro-dots #'B*.expansion)
 
            #:attr expansion (~>> (syntax/loc/props this-syntax
@@ -300,7 +301,8 @@
                  (syntax-local-bind-syntaxes (attribute x) #f intdef-ctx*)]
 
            #:with [x- ...] (map intro (attribute x))
-           #:with {~var alias-type- (type intdef-ctx*)} #'alias-type
+           #:with {~var alias-type- (type intdef-ctx*)}
+           (intro #'alias-type)
    
            #:attr expansion (~>> (syntax/loc/props this-syntax
                                    (type-decl (alias [x- ...] alias-type-.expansion)))
