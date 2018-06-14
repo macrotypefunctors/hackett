@@ -237,8 +237,8 @@
            (reintro-dots
             (hash-zip (attribute decls.keys) (attribute decl-.expansion)))
            #:attr expansion (~>> (syntax/loc/props this-syntax
-                                                   (head internal-ids-
-                                                         decls-expansion-))
+                                   (head internal-ids-
+                                         decls-expansion-))
                                  (internal-definition-context-track intdef-ctx*))
            #:attr residual (residual #'[decl-.residual ... expansion]
                                      #'head)]
@@ -261,8 +261,8 @@
            #:with B** (reintro-dots #'B*.expansion)
 
            #:attr expansion (~>> (syntax/loc/props this-syntax
-                                                   (head ([x-- A.expansion])
-                                                         B**))
+                                   (head ([x-- A.expansion])
+                                         B**))
                                  (internal-definition-context-track intdef-ctx*))
            #:attr residual (residual #'[A.residual B*.residual expansion]
                                      #'head)])
@@ -278,7 +278,7 @@
   ;; (#%val-decl type)
   [pattern (val-decl:#%val-decl (~var val-type (type intdef-ctx)))
            #:attr expansion (syntax/loc/props this-syntax
-                                              (val-decl val-type.expansion))
+                              (val-decl val-type.expansion))
            #:attr residual (residual #'[val-type.residual expansion]
                                      #'val-decl)]
 
@@ -289,11 +289,12 @@
            #:attr residual (residual #'[constr-type.residual expansion]
                                      #'constr-decl)]
 
-  ;; (#%type-decl (#%alias type))
+  ;; (#%type-decl (#%alias (id ...) type))
+  ;; TODO: handle expansion with type parameters for aliases
   [pattern (type-decl:#%type-decl
-            (alias:#%alias (~var alias-type (type intdef-ctx))))
+            (alias:#%alias () (~var alias-type (type intdef-ctx))))
            #:attr expansion (syntax/loc/props this-syntax
-                                              (type-decl (alias alias-type.expansion)))
+                              (type-decl (alias () alias-type.expansion)))
            #:attr residual (residual #'[alias-type.residual expansion]
                                      #'type-decl)]
 
@@ -379,7 +380,7 @@
             (λ (prev-decl)
               (syntax-parse prev-decl #:literal-sets [sig-literals]
                 [(type-decl:#%type-decl (#%opaque))
-                 #`(type-decl (#%alias #,type))]
+                 #`(type-decl (#%alias () #,type))]
                 [_
                  (raise-syntax-error #f
                    "can't `where` a non-opaque declaration"

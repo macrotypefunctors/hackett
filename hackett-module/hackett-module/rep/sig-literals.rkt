@@ -65,7 +65,7 @@
 ;; A Decl is one of:
 ;;  - (#%val-decl Type)
 ;;  - (#%constructor-decl Type)
-;;  - (#%type-decl (#%alias Type))
+;;  - (#%type-decl (#%alias [Id ...] Type))
 ;;  - (#%type-decl (#%opaque))
 ;;  - (#%type-decl (#%data Id ...))  ; constructor ids
 ;;  - (#%module-decl Signature)

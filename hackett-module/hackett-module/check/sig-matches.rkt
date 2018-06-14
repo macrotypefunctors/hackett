@@ -142,7 +142,8 @@
           (#%type-decl (#%data c ...))}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
-    [(#%type-decl (#%alias t))
+    ;; TODO: deal with possible type parameters for aliases
+    [(#%type-decl (#%alias () t))
      (define rhs #'(make-variable-like-transformer (quote-syntax t)))
      (syntax-local-bind-syntaxes (list id) rhs ctx)]
 
@@ -165,7 +166,8 @@
 
     [[(#%type-decl _) (#%type-decl (#%opaque))]
      #true]
-    [[(#%type-decl (#%alias A)) (#%type-decl (#%alias B))]
+    ;; TODO: deal with possible type parameters for aliases
+    [[(#%type-decl (#%alias () A)) (#%type-decl (#%alias () B))]
      (type-equal? #'A #'B)]
     [[(#%type-decl (#%data c-A ...)) (#%type-decl (#%data c-B ...))]
      ; use set comparison because order doesn't matter

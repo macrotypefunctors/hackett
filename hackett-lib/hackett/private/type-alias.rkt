@@ -12,7 +12,8 @@
 
          (only-in hackett/private/adt type-constructor-spec))
 
-(provide type)
+(provide type
+         (for-syntax make-alias-transformer))
 
 (begin-for-syntax
   ; Alias transformer bindings; use the make-alias-transformer constructor instead of creating
