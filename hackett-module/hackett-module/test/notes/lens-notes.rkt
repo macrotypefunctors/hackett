@@ -1,8 +1,10 @@
 #lang hackett-module
 
-(require hackett/data/identity
+(require hackett-module/private/test
+         hackett/data/identity
          syntax/parse/define
          (only-in racket/base begin |...|))
+(define-binary-check ==! ([X] [(Eq X) (Show X)] X) == show)
 
 (type Num Double)
 
@@ -63,16 +65,33 @@
        (Ball ball-pos ball-vel))
      (def-data-lenses Lens
        (Dir dir-dx dir-dy))
+     (def game-ball-vel-dx
+       (Lens.thrush game-ball (Lens.thrush ball-vel dir-dx)))
      (defn reflect-left-wall
        [[g]
-        (Lens.modify (Lens.thrush game-ball (Lens.thrush ball-vel dir-dx))
-                     g
-                     dabs)])
+        (Lens.modify game-ball-vel-dx g dabs)])
      (defn reflect-right-wall
        [[g]
-        (Lens.modify (Lens.thrush game-ball (Lens.thrush ball-vel dir-dx))
-                     g
-                     {dneg |.| dabs})])
+        (Lens.modify game-ball-vel-dx g {dneg |.| dabs})])
+
+     (def test
+       (do
+         {(Lens.get
+           game-ball-vel-dx
+           (reflect-left-wall (Game (Score 2 1)
+                                    (Player (Pos #i45 #i95) (Dir #i0 #i0))
+                                    (Player (Pos #i55 #i5) (Dir #i0 #i0))
+                                    (Ball (Pos #i0 #i50) (Dir #i-4 #i3)))))
+          ==!
+          #i4}
+         {(Lens.get
+           game-ball-vel-dx
+           (reflect-right-wall (Game (Score 2 1)
+                                     (Player (Pos #i45 #i95) (Dir #i0 #i0))
+                                     (Player (Pos #i55 #i5) (Dir #i0 #i0))
+                                     (Ball (Pos #i100 #i50) (Dir #i4 #i3)))))
+          ==!
+          #i-4}))
      )))
 
 ;; ---------------------------------------------------------
@@ -208,4 +227,12 @@
 
 (def-module Lens3*
   (seal Lens3 :> LENS))
+
+;; ---------------------------------------------------------
+
+(def-module Pong1 (Pong Lens1))
+(def-module Pong2 (Pong Lens2))
+(def-module Pong3 (Pong Lens3))
+
+(test (do Pong1.test Pong2.test Pong3.test))
 
