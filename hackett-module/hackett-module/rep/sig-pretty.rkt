@@ -70,7 +70,9 @@
     #:literal-sets [sig-literals]
     [(#%val-decl t) `(val ,name : ,(type->string/sig #'t))]
     [(#%constructor-decl t) `(constructor ,name : ,(type->string/sig #'t))]
-    [(#%type-decl (#%alias t)) `(type ,name = ,(type->string/sig #'t))]
+    [(#%type-decl (#%alias () t)) `(type ,name = ,(type->string/sig #'t))]
+    [(#%type-decl (#%alias (x ...+) t))
+     `(type (,name ,@(syntax->datum #'(x ...))) = ,(type->string/sig #'t))]
     [(#%type-decl (#%opaque)) `(type ,name)]
     [(#%type-decl (#%data c ...))
      ;; TODO: use the types of the constructors to print the variants

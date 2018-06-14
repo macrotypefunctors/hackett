@@ -112,7 +112,7 @@
                [(type-decl:#%type-decl (#%opaque))
                 ;#:with sym (namespaced-symbol key)
                 #:with d-id ((@ self-type.key->id) key)
-                #'(type-decl (#%alias d-id))]
+                #'(type-decl (#%alias () d-id))]
 
                [(mod-decl:#%module-decl submod-signature)
                 ; #:with sym (namespaced-symbol key)
@@ -250,10 +250,12 @@
 
   ;; generate aliases for alias types
 
+  ;; TODO: generate the correct bindings for aliases with type parameters
+  ;;       (possibly using make-alias-transformer)
   (define alias-type-bindings
     (for/list ([key (in-list alias-type-keys)]
                [id (in-list alias-type-ids)])
-      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} t))
+      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} () t))
         (hash-ref s-decls key))
       (define/syntax-parse t*
         (stx-substs #'t internal->introduced))
@@ -460,6 +462,8 @@
      #`(make-rename-transformer (quote-syntax #,submod-id))
      intdef-ctx))
 
+  ;; TODO: considering that aliases might have type parameters, should
+  ;;       this generate a rename-transformer instead?
   (for ([(key alias-id) (in-hash alias-key->id)])
     (define internal-id (hash-ref internal-ids key))
     (syntax-local-bind-syntaxes
