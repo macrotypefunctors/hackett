@@ -310,17 +310,28 @@
            #:attr residual (residual #'[alias-type-.residual expansion]
                                      #'type-decl)]
 
-  ;; (#%type-decl (#%opaque))
-  [pattern (type-decl:#%type-decl (opaque:#%opaque))
+  ;; (#%type-decl (#%opaque [id ...]))
+  [pattern (type-decl:#%type-decl (opaque:#%opaque [x:id ...]))
            #:attr expansion this-syntax
            #:attr residual (residual #'[expansion]
                                      #'type-decl)]
 
-  ;; (#%type-decl (#%data constructor-id ...))
+  ;; (#%type-decl (#%data [param-id ...] constructor-id ...))
   [pattern (type-decl:#%type-decl
-            (data:#%data {~var constructor-id (ref-id intdef-ctx)} ...))
+            (data:#%data [x:id ...] ctor:id ...))
+
+           ;; create a context where the xs are bound
+           #:do [(define intdef-ctx* (syntax-local-make-definition-context intdef-ctx))
+                 (define (intro stx)
+                   (internal-definition-context-introduce intdef-ctx* stx))
+                 (syntax-local-bind-syntaxes (attribute x) #f intdef-ctx*)]
+
+           #:with [x- ...] (map intro (attribute x))
+           #:with [{~var constructor-id (ref-id intdef-ctx*)} ...]
+           (map intro (@ ctor))
+
            #:attr expansion (syntax/loc/props this-syntax
-                              (type-decl (data constructor-id.expansion ...)))
+                              (type-decl (data [x- ...] constructor-id.expansion ...)))
            #:attr residual (residual #'[constructor-id.residual ... expansion]
                                      #'type-decl)]
 
@@ -391,7 +402,7 @@
                        (namespaced:type sym)
             (λ (prev-decl)
               (syntax-parse prev-decl #:literal-sets [sig-literals]
-                [(type-decl:#%type-decl (#%opaque))
+                [(type-decl:#%type-decl (#%opaque ()))
                  #`(type-decl (#%alias () #,type))]
                 [_
                  (raise-syntax-error #f

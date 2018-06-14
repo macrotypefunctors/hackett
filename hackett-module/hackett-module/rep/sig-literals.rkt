@@ -66,8 +66,8 @@
 ;;  - (#%val-decl Type)
 ;;  - (#%constructor-decl Type)
 ;;  - (#%type-decl (#%alias [Id ...] Type))
-;;  - (#%type-decl (#%opaque))
-;;  - (#%type-decl (#%data Id ...))  ; constructor ids
+;;  - (#%type-decl (#%opaque [Id ...]))
+;;  - (#%type-decl (#%data [Id ...] Id ...))  ; parameters, constructor ids
 ;;  - (#%module-decl Signature)
 
 (define-syntax #%val-decl #f)
@@ -123,7 +123,7 @@
   (define (decl-type-opaque? d)
     (syntax-parse d
       #:literal-sets [sig-literals]
-      [(#%type-decl (#%opaque)) #t]
+      [(#%type-decl (#%opaque . _)) #t]
       [_ #f]))
 
   ;; Decl -> Bool
