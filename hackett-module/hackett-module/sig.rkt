@@ -20,7 +20,7 @@
                     value-namespace-introduce)
          hackett/private/type-reqprov
          (only-in hackett/private/adt data-constructor-spec)
-         (only-in hackett/base type data)
+         (only-in (unmangle-in hackett/base) type data)
          (for-syntax racket/base
                      racket/match
                      syntax/parse
@@ -60,6 +60,7 @@
       #:with [key ...]  #`[#,(namespaced:value #'x)]
       #:with [id ...]   #'[x]
       #:with [decl ...] #'[(#%val-decl val-type)]]
+
     [pattern (data {~type X:id} c:data-constructor-spec ...)
       #:with X-key (namespaced:type (attribute X))
       #:with [c-key ...] (map namespaced:value (attribute c.tag))
@@ -70,6 +71,20 @@
       #`[[X-key X (#%type-decl (#%data [] c-tag ...))]
          [c-key c-tag (#%constructor-decl c-type)]
          ...]]
+    [pattern (data {~type (X:id arg:id ...+)} c:data-constructor-spec ...)
+      #:with X-key (namespaced:type (attribute X))
+      #:with [c-key ...] (map namespaced:value (attribute c.tag))
+      #:with [c-tag ...] (map value-namespace-introduce (attribute c.tag))
+      #:with [c-type ...] (type-namespace-introduce
+                           (template
+                            [(?#%type:forall* [arg ...]
+                               (?->* c.arg ... (?#%type:app* X arg ...)))
+                             ...]))
+      #:with [[key id decl] ...]
+      #`[[X-key X (#%type-decl (#%data [arg ...] c-tag ...))]
+         [c-key c-tag (#%constructor-decl c-type)]
+         ...]]
+
     [pattern (type {~type X:id})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
@@ -78,6 +93,7 @@
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
       #:with [decl ...] #'[(#%type-decl (#%opaque [arg ...]))]]
+
     [pattern (type {~type X:id} = {~type alias-type:expr})
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
@@ -86,6 +102,7 @@
       #:with [key ...]  #`[#,(namespaced:type #'X)]
       #:with [id ...]   #'[X]
       #:with [decl ...] #'[(#%type-decl (#%alias [arg ...] alias-type))]]
+
     [pattern (module {~module X:id} : {~signature signature:expr})
       #:with [key ...]  #`[#,(namespaced:module #'X)]
       #:with [id ...]   #'[X]

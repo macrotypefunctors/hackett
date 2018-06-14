@@ -13,7 +13,8 @@
           data-constructor?
           data-constructor-arity
           data-constructor-make-match-pat
-          data-constructor-spec)
+          data-constructor-spec
+          type-constructor-spec)
  (prefix-in hkt: hackett/base)
  (prefix-in sig: (unmangle-in #:no-introduce "sig.rkt"))
  (prefix-in mod: (unmangle-in #:no-introduce "def.rkt"))
@@ -83,11 +84,12 @@
                                               disappeared-binding
                                               (syntax-local-introduce #'id))]
 
-    [pattern (hkt:data id:id
+    [pattern (hkt:data {~and {~seq head-stuff ...}
+                             {~seq head:type-constructor-spec}}
                        {~and {~seq variant-stuff ...}
                              {~seq variant:data-constructor-spec}}
                        ...)
-             #:with sig-entry #'(sig:data id variant-stuff ... ...)
+             #:with sig-entry #'(sig:data head-stuff ... variant-stuff ... ...)
              #:with [val-id ...] #'[variant.tag ...]
              #:with [mod-id ...] #'[]
              ;; TODO: attach the other things

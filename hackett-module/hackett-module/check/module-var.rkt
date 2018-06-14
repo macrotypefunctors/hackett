@@ -296,7 +296,7 @@
                [id (in-list data-type-ids)])
       ;; get the constructors
       (define/syntax-parse
-        ({~literal #%type-decl} ({~literal #%data} [] c ...))
+        ({~literal #%type-decl} ({~literal #%data} [x ...] c ...))
         (hash-ref s-decls key))
 
       ;; find the "new" constructor ids for the module being introduced
@@ -309,8 +309,8 @@
               (raise-syntax-error c-id
                 "constructor declaration not found in signature"))))
 
-      ;; TODO: get the actual type-var arity
-      (define type-var-arity 0)
+      ;; get the type-var arity
+      (define type-var-arity (length (@ x)))
 
       (list id
             #`(data-type-constructor/reintroducible
