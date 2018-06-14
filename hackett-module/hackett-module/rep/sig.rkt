@@ -14,6 +14,7 @@
          racket/match
          syntax/parse
          syntax/parse/define
+         syntax/parse/experimental/template
          (only-in syntax/parse [attribute @])
          syntax/intdef
          syntax/id-table
@@ -29,8 +30,10 @@
          "../namespace/reqprov.rkt"
          (for-syntax racket/base)
          (for-template racket/base
-                       (only-in "../dot/dot-t.rkt" reintroduce-#%dot)
+                       (only-in hackett/private/type-alias make-alias-transformer)
                        (rename-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
+                       (rename-in (unmangle-in "../dot/dot-e.rkt") [#%dot #%dot_e])
+                       (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                        "sig-literals.rkt"))
 
 ; helper for expanding signatures; combines "residual" properties
@@ -105,6 +108,17 @@
   (syntax-parse decl
     #:context 'syntax-local-declare-decl
     #:literal-sets [sig-literals]
+
+    [(#%type-decl (#%alias [x ...] _))
+     #:with id- (generate-temporary id)
+     #:with id-* (internal-definition-context-introduce intdef-ctx #'id-)
+     #:with rhs #'(make-rename-transformer (quote-syntax id-))
+     #:do [(syntax-local-bind-syntaxes (list #'id-) #f intdef-ctx)
+           (syntax-local-bind-syntaxes (list id) #'rhs intdef-ctx)]
+
+     (λ (stx)
+       (stx-subst stx #'id-* path-to-id))]
+
     [{~or (#%type-decl . _)
           (#%val-decl . _)
           (#%constructor-decl . _)}
@@ -123,8 +137,10 @@
                   ([(local-key decl) (in-hash (@ decls.value))])
          (define tmp-id
            (generate-temporary/1num (namespaced-symbol local-key)))
+         (define dot
+           (decl-dot-form decl))
          (define local-path
-           #`(#%dot_m #,path-to-id #,(namespaced-symbol local-key)))
+           #`(#,dot #,path-to-id #,(namespaced-symbol local-key)))
          (define nested-reintro
            (syntax-local-declare-decl tmp-id decl local-path intdef-ctx))
          (values local-key tmp-id nested-reintro)))
@@ -146,6 +162,14 @@
        (define id- (internal-definition-context-introduce intdef-ctx id))
        (define stx- (reintro stx))
        (reintroduce-#%dot id- path-to-id stx- intdef-ctx))]))
+
+;; PartialDecl -> Identifier
+(define (decl-dot-form decl)
+  (syntax-parse decl
+    #:literal-sets [sig-literals]
+    [(#%type-decl . _) #'#%dot_τ]
+    [(#%module-decl . _) #'#%dot_m]
+    [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
 
 
 (struct declared-module-var [module-sym key->tmp-id]
