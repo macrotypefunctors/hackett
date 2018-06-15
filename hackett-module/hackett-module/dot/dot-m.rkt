@@ -14,16 +14,14 @@
                      (only-in syntax/parse [attribute @])
                      syntax/parse/define
                      "../namespace/namespace.rkt"
-                     "../prop-dot-accessible.rkt"))
+                     "../prop-dot-accessible.rkt"
+                     "../util/disappeared-use.rkt"))
 
 
 ;; a ModulePath is one of:
 ;;   - Identifier
 ;;   - #'(#%dot ModulePath Symbol)
 ;; represents a path to a module or submodule
-
-(begin-for-syntax
-  (define disappeared-use 'disappeared-use))
 
 ;; ---------------------------------------------------------
 
@@ -62,10 +60,8 @@
      (format "~a is not bound to a module within ~a"
              (syntax-e #'x)
              (syntax->datum #'m))
-     (syntax-property
+     (add-disappeared-use
       module-id
-      disappeared-use
-      (syntax-local-introduce #'m.root))]))
+      #'m.root)]))
 
 ;; ---------------------------------------------------------
-

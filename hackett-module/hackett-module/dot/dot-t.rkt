@@ -14,15 +14,8 @@
                      "../prop-dot-accessible.rkt"
                      "../prop-reintroducible-dot-type.rkt"
                      "../util/stx-traverse.rkt"
+                     "../util/disappeared-use.rkt"
                      (only-in syntax/parse [attribute @])))
-
-(begin-for-syntax
-  (define disappeared-use 'disappeared-use)
-  (define (add-disappeared-use stx . ids)
-    (define old (or (syntax-property stx disappeared-use) '()))
-    (syntax-property stx
-                     disappeared-use
-                     (append (map syntax-local-introduce ids) old))))
 
 (define-syntax-parser #%dot
   [(_ {~module m:dot-accessible-path/type} ~! x:id)

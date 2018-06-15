@@ -13,11 +13,10 @@
                               prop:case-pattern-expander)
                      "../namespace/namespace.rkt"
                      "../prop-dot-accessible.rkt"
+                     "../util/disappeared-use.rkt"
                      (only-in syntax/parse [attribute @])))
 
 (begin-for-syntax
-  (define disappeared-use 'disappeared-use)
-
   (struct proc+case-pat-exp [proc case-pat-trans]
     #:property prop:procedure (struct-field-index proc)
     #:property prop:case-pattern-expander
@@ -38,10 +37,9 @@
       (format "~a is not bound to a value within ~a"
               (syntax-e #'x)
               (syntax->datum #'m))
-      (syntax-property
+      (add-disappeared-use
        val-id
-       disappeared-use
-       (syntax-local-introduce #'m.root))])
+       #'m.root)])
 
    ;; as a case-pattern expander
    (syntax-parser
@@ -54,7 +52,6 @@
       (format "~a is not bound to a pattern within ~a"
               (syntax-e #'x)
               (syntax->datum #'m))
-      (syntax-property
+      (add-disappeared-use
        pat-id
-       disappeared-use
-       (syntax-local-introduce #'m.root))])))
+       #'m.root)])))
