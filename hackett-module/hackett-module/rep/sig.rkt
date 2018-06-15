@@ -160,6 +160,7 @@
 
      (define rhs
        #`(declared-module-var
+          (quote-syntax #,path-to-id)
           '#,(gensym (syntax-e id))
           (hash key/tmp-id ... ...)))
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]))
@@ -173,7 +174,12 @@
     [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
 
 
-(struct declared-module-var [module-sym key->tmp-id]
+(struct declared-module-var [path module-sym key->tmp-id]
+  #:property prop:procedure
+  (λ (self stx)
+    (define path (declared-module-var-path self))
+    ((make-variable-like-transformer path)
+     stx))
   #:property prop:dot-origin
   (λ (self)
     (dot-origin (declared-module-var-module-sym self)))
