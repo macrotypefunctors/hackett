@@ -22,10 +22,12 @@
 (define-syntax-parser #%apply-type
   #:literals [#%dot_τ]
 
-  [(_ head:id arg ...)
+  [(_ head) #'head]
+
+  [(_ head:id arg ...+)
    #'(head arg ...)]
 
-  [(_ (#%dot_τ {~module m:dot-accessible-path/type} ~! x:id) arg ...)
+  [(_ (#%dot_τ {~module m:dot-accessible-path/type} ~! x:id) arg ...+)
    #:do [(define key (namespaced:type (syntax-e #'x)))
          (define type-id ((@ m.key->id) key))]
    #:fail-unless type-id
