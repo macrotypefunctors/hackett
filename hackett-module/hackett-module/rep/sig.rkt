@@ -133,13 +133,14 @@
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]
 
     [(#%module-decl (#%pi-sig . _))
-     #:with path path-to-id
+     #:with path (path->u-mod-path path-to-id)
      (define rhs
        #'(make-variable-like-transformer (quote-syntax path)))
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]
 
     [(#%module-decl (#%sig internal-ids:hash-literal
                            decls:hash-literal))
+     #:with path (path->u-mod-path path-to-id)
 
      (define-values [keys tmp-ids]
        (for/lists (keys tmp-ids)
@@ -160,7 +161,7 @@
 
      (define rhs
        #`(declared-module-var
-          (quote-syntax #,path-to-id)
+          (quote-syntax path)
           '#,(gensym (syntax-e id))
           (hash key/tmp-id ... ...)))
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]))
@@ -169,15 +170,16 @@
 ;; PartialDecl -> Identifier
 (define (decl-dot-form decl)
   (syntax-parse decl
+    #:literal-sets [sig-literals]
     [(#%type-decl . _) #'#%dot_τ]
     [(#%module-decl . _) #'#%dot_m]
     [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
 
 
-(struct declared-module-var [path module-sym key->tmp-id]
+(struct declared-module-var [u-mod-path module-sym key->tmp-id]
   #:property prop:procedure
   (λ (self stx)
-    (define path (declared-module-var-path self))
+    (define path (declared-module-var-u-mod-path self))
     ((make-variable-like-transformer path)
      stx))
   #:property prop:dot-origin

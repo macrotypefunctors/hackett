@@ -2,7 +2,8 @@
 
 (provide #%apply-type
          (for-syntax reinterpret
-                     path->u-type-path))
+                     path->u-type-path
+                     path->u-mod-path))
 
 (require
  syntax/parse/define
@@ -77,7 +78,7 @@
     #:attributes [norm]
     #:literal-sets [u-type-literals]
     [pattern (~#%type:app* (#%type:con dot:#%dot_τ ~!) mp:u-module-path (#%type:con x:id))
-             #:with norm #'(dot mp.norm x)]
+             #:with norm (syntax/loc this-syntax (dot mp.norm x))]
     [pattern x:id
              #:with norm #'x])
 
@@ -85,7 +86,7 @@
     #:attributes [norm]
     #:literal-sets [u-type-literals]
     [pattern (~#%type:app* (#%type:con dot:#%dot_m ~!) mp:u-module-path (#%type:con x:id))
-             #:with norm #'(dot mp.norm x)]
+             #:with norm (syntax/loc this-syntax (dot mp.norm x))]
     [pattern x:id
              #:with norm #'x])
 
