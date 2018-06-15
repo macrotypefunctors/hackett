@@ -111,13 +111,36 @@
 
     [(#%type-decl (#%alias [x ...] _))
      #:with id- (generate-temporary id)
-     #:with id-* (internal-definition-context-introduce intdef-ctx #'id-)
-     #:with rhs #'(make-rename-transformer (quote-syntax id-))
-     #:do [(syntax-local-bind-syntaxes (list #'id-) #f intdef-ctx)
-           (syntax-local-bind-syntaxes (list id) #'rhs intdef-ctx)]
 
-     (λ (stx)
-       (stx-subst stx #'id-* path-to-id))]
+     #:do [(define reset-alias-prop (gensym 'reset-alias))
+           (define (has-prop? s)
+             (and (syntax? s)
+                  (syntax-property s reset-alias-prop)))]
+     #:with t-res (template (?#%type:app* id- x ...))
+
+     #:with reset-alias-prop* reset-alias-prop
+     #:with rhs #'(make-alias-transformer
+                   (list (quote-syntax x) ...)
+                   (syntax-property (quote-syntax t-res)
+                     'reset-alias-prop* #t)
+                   '#f)
+     #:do [(syntax-local-bind-syntaxes (list #'id-) #f intdef-ctx)
+           (syntax-local-bind-syntaxes (list id) #'rhs intdef-ctx)
+           ;; replace (#%app* id- t ...) => (apply-alias path-to-id t ...)
+           (define (reset-alias stx)
+             (cond
+               [(has-prop? stx)
+                (syntax-parse stx
+                  [(~#%type:app* head arg ...)
+                   #:with path path-to-id
+                   ;; TODO: prevent ((#%dot M T) x ...) from
+                   ;;       expanding into (#%app (#%dot M T) x ...)
+                   (if (empty? (@ arg))
+                       #'path
+                       #'(path arg ...))])]
+               [else
+                (traverse-stx/recur stx reset-alias)]))]
+     reset-alias]
 
     [{~or (#%type-decl . _)
           (#%val-decl . _)
