@@ -112,7 +112,7 @@
     [(#%type-decl {~or (#%alias [x ...] _)
                        (#%opaque [x ...])
                        (#%data [x ...] . _)})
-     #:with path path-to-id
+     #:with path (path->u-type-path path-to-id)
      (define rhs
        (template
         (make-alias-transformer
@@ -127,10 +127,16 @@
 
     [{~or (#%val-decl . _)
           (#%constructor-decl . _)}
-     (syntax-local-bind-syntaxes (list id) #f intdef-ctx)]
+     #:with path path-to-id
+     (define rhs
+       #'(make-variable-like-transformer (quote-syntax path)))
+     (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]
 
     [(#%module-decl (#%pi-sig . _))
-     (syntax-local-bind-syntaxes (list id) #f intdef-ctx)]
+     #:with path path-to-id
+     (define rhs
+       #'(make-variable-like-transformer (quote-syntax path)))
+     (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]
 
     [(#%module-decl (#%sig internal-ids:hash-literal
                            decls:hash-literal))
@@ -144,9 +150,7 @@
          (define dot
            (decl-dot-form decl))
          (define local-path
-           (quasitemplate (?#%type:app* (#%type:con #,dot)
-                                        #,path-to-id
-                                        (#%type:con #,sym))))
+           #`(#,dot #,path-to-id #,sym))
          (syntax-local-declare-decl tmp-id decl local-path intdef-ctx)
          (values local-key tmp-id)))
 

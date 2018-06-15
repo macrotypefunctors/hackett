@@ -306,8 +306,9 @@
           (or (for/first ([(key id) (in-hash s-internal-ids)]
                           #:when (free-identifier=? c-id id))
                 (hash-ref constructor-key->id key))
-              (raise-syntax-error c-id
-                "constructor declaration not found in signature"))))
+              (raise-syntax-error #f
+                "constructor declaration not found in signature"
+                c-id))))
 
       ;; get the type-var arity
       (define type-var-arity (length (@ x)))

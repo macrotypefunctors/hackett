@@ -1,7 +1,8 @@
 #lang racket/base
 
 (provide #%apply-type
-         (for-syntax reinterpret))
+         (for-syntax reinterpret
+                     path->u-type-path))
 
 (require
  syntax/parse/define
@@ -107,6 +108,29 @@
     (syntax-parse stx
       [u:u-type #'u.norm]
       [_ (traverse-stx/recur stx reinterpret)]))
+
+
+  (define (path->u-type-path p)
+    (syntax-parse p
+      #:literals [#%dot_τ]
+      [x:id #'x]
+      [(dot:#%dot_τ mp x)
+       #:with mp* (path->u-mod-path #'mp)
+       (template
+        (?#%type:app* (#%type:con dot)
+                      mp*
+                      (#%type:con x)))]))
+
+  (define (path->u-mod-path p)
+    (syntax-parse p
+      #:literals [#%dot_m]
+      [x:id #'x]
+      [(dot:#%dot_m mp x)
+       #:with mp* (path->u-mod-path #'mp)
+       (template
+        (?#%type:app* (#%type:con dot)
+                      mp*
+                      (#%type:con x)))]))
 
   )
 
