@@ -1,5 +1,8 @@
 #lang racket/base
 
+(provide #%apply-type
+         (for-syntax reinterpret))
+
 (require
  syntax/parse/define
  "../namespace/reqprov.rkt"
@@ -92,9 +95,16 @@
   ;; Reinterpret the given uninterpreted type, so that the resulting type
   ;; can be expanded into a valid Hackett type.
   ;; UType -> TypeStx
-  (define (reinterpret ut)
+  (define (reinterpret-u-type ut)
     (syntax-parse ut
       [u:u-type #'u.norm]))
+
+  ;; Stx -> Stx
+  ;; where UTypes inside are reinterpreted
+  (define (reinterpret stx)
+    (syntax-parse stx
+      [u:u-type #'u.norm]
+      [_ (traverse-stx/recur stx reinterpret)]))
 
   )
 
