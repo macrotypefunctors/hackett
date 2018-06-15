@@ -10,12 +10,13 @@
  syntax/parse
  syntax/id-table
  (only-in syntax/parse [attribute @])
- (only-in hackett/private/typecheck type->string type-literals)
+ hackett/private/typecheck
  "../util/stx.rkt"
  "../util/stx-traverse.rkt"
  "../util/stx-subst.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
+               "reinterpret.rkt"
                (only-in (unmangle-in #:only "../dot/dot-m.rkt")
                         [#%dot #%dot_m])
                (only-in (unmangle-in #:only "../dot/dot-t.rkt")
@@ -90,13 +91,18 @@
   (type->string
    (let traverse ([t t])
      (syntax-parse t
-       #:literals [#%dot_m #%dot_τ]
-       [(#%dot_m m:expr x:id)
+       #:literal-sets [type-literals]
+       #:literals [#%dot_m #%dot_τ #%apply-type]
+       [(~#%type:app* (#%type:con #%dot_m) m:expr (#%type:con x:id))
         (format-id #f "~a.~a"
                    (syntax->datum (traverse #'m))
                    #'x)]
-       [(#%dot_τ m:expr x:id)
+       [(~#%type:app* (#%type:con #%dot_τ) m:expr (#%type:con x:id))
         (format-id #f "~a.~a"
                    (syntax->datum (traverse #'m))
                    #'x)]
+       [(~#%type:app* (#%type:con #%apply-type) t:expr)
+        (traverse #'t)]
+       [(~#%type:app* (#%type:con #%apply-type) t:expr a ...)
+        (traverse #'(t a ...))]
        [_ (traverse-stx/recur t traverse)]))))

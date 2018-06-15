@@ -7,7 +7,8 @@
          "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
          (only-in "dot-m.rkt" dot-accessible-path/type)
-         (only-in hackett/private/type-language #%type:con)
+         (except-in hackett/private/type-language
+                    ~type type-namespace-introduce value-namespace-introduce)
          (for-syntax racket/base
                      racket/bool
                      "../namespace/namespace.rkt"
@@ -15,7 +16,8 @@
                      "../prop-reintroducible-dot-type.rkt"
                      "../util/stx-traverse.rkt"
                      "../util/disappeared-use.rkt"
-                     (only-in syntax/parse [attribute @])))
+                     (only-in syntax/parse [attribute @])
+                     syntax/parse/experimental/template))
 
 (define-syntax-parser #%dot
   [(_ {~module m:dot-accessible-path/type} ~! x:id)
@@ -57,7 +59,8 @@
         [{~or (#%type:con {~var x (reintroducible-dot-type-id ctx)})
               {~var x (reintroducible-dot-type-id ctx)}}
          (if (symbol=? (@ x.module-sym) origin-sym)
-             (syntax/loc stx (#%dot m-prefix* x.external-sym))
+             (template/loc stx
+               (?#%type:app* (#%type:con #%dot) m-prefix* (#%type:con x.external-sym)))
              stx)]
 
         [_ (traverse-stx/recur stx traverse)]))
