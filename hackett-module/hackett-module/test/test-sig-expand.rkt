@@ -3,6 +3,7 @@
 (require "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
          "../rep/reinterpret.rkt"
+         (only-in (unmangle-in #:no-introduce hackett/base) Integer)
          (unmangle-in #:no-introduce "../sig.rkt")
          (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
          (for-syntax racket/base
@@ -97,6 +98,25 @@
                      (#%type:app (#%type:con #%apply-type) Y1-ref2))])
                   #:when (free-identifier=? #'Y1 #'Y1-ref1)
                   #:when (free-identifier=? #'Y1 #'Y1-ref2))
+
+  ;; ---------------
+
+  (check-stxparse (expand-sig
+                   (sig (type (X a))
+                        (val x : (X Integer))))
+                  #:literal-sets [sig-literals u-type-literals]
+                  #:literals [Integer]
+                  (~sig
+                   [#s(namespaced type X)
+                    X1
+                    (#%type-decl (#%opaque [a1]))]
+                   [#s(namespaced value x)
+                    x2
+                    (#%val-decl (#%type:app
+                                 (#%type:app (#%type:con #%apply-type)
+                                             X1-ref)
+                                 (#%type:con Integer)))])
+                  #:when (free-identifier=? #'X1 #'X1-ref))
 
   ;; ---------------
 
