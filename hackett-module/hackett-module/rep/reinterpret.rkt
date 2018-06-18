@@ -2,6 +2,7 @@
 
 (provide #%apply-type
          (for-syntax reinterpret
+                     u-type-literals
                      path->u-type-path
                      path->u-mod-path))
 
