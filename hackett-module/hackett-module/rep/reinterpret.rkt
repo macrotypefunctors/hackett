@@ -179,7 +179,7 @@
   )
 
 (module+ test
-  (define-syntax M- #f)
+  (define-syntax M- #t)
 
   (begin-for-syntax
     (require rackunit)
