@@ -91,11 +91,11 @@
 
    #:do [(syntax-local-bind-syntaxes (list #'x-) #f ctx)
          (define val-ids/exprs
-           (syntax-local-bind-module #'x #'x-- #'A.expansion ctx))]
+           (syntax-local-bind-module #'x #'x- #'A.expansion ctx))]
 
    #:with [body- B] (sig⇒ #'body ctx)
    #:with B* (reintroduce-#%dot (intro #'x) #'x-- #'B ctx)
-   #:with [[val-id val-expr] ...] (intro #`#,val-ids/exprs)
+   #:with [[val-id val-expr] ...] val-ids/exprs
    (internal-definition-context-track
     ctx
     (attach-sig #'(λ (x--)
