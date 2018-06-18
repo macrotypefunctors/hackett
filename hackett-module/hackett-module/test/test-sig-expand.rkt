@@ -4,6 +4,7 @@
          "../rep/sig-literals.rkt"
          "../rep/reinterpret.rkt"
          (unmangle-in #:no-introduce "../sig.rkt")
+         (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
          (for-syntax racket/base
                      syntax/parse
                      syntax/parse/define
@@ -53,5 +54,29 @@
                     (#%val-decl (#%type:app (#%type:con #%apply-type)
                                             X1-ref:id))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
+
+  ;; ---------------
+
+  (check-stxparse (expand-sig
+                   (sig (module M : (sig (type X)))
+                        (val x : (#%dot_τ M X))))
+                  #:literal-sets [sig-literals u-type-literals]
+                  (~sig
+                   [#s(namespaced module M)
+                    M1
+                    (#%module-decl {~sig
+                                    [#s(namespaced type X)
+                                     X2
+                                     (#%type-decl (#%opaque []))]})]
+                   [#s(namespaced value x)
+                    x3
+                    (#%val-decl (#%type:app
+                                 (#%type:con #%apply-type)
+                                 (#%type:app
+                                  (#%type:app
+                                   (#%type:con #%dot_τ)
+                                   M1-ref)
+                                  (#%type:con {~datum X}))))])
+                  #:when (free-identifier=? #'M1 #'M1-ref))
 
   )
