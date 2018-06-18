@@ -3,7 +3,8 @@
 (provide signature-matches?
          sig-matches?)
 
-(require (for-template "../rep/sig-literals.rkt")
+(require (for-template "../rep/sig-literals.rkt"
+                       "../rep/reinterpret.rkt")
          "module-var.rkt"
          "../rep/sig.rkt"
          "../util/stx.rkt"
@@ -45,8 +46,8 @@
 ;; PiSig PiSig -> Boolean
 ;; the signatures A and B should already be expanded
 (define (pi-sig-matches? A B)
-  (define/syntax-parse (_ ([A-x A-in]) A-out) A)
-  (define/syntax-parse (_ ([B-x B-in]) B-out) B)
+  (define/syntax-parse (_ ([A-x A-in]) A-out) (reinterpret A))
+  (define/syntax-parse (_ ([B-x B-in]) B-out) (reinterpret B))
   (and
    ;; the "in" is contravariant
    (signature-matches? #'B-in #'A-in)
@@ -71,7 +72,9 @@
 
 ;; Sig Sig -> Boolean
 ;; the signatures should be already expanded.
-(define (sig-matches? A B)
+(define (sig-matches? A/u B/u)
+  (define A (reinterpret A/u))
+  (define B (reinterpret B/u))
   (define/syntax-parse (_ A-internal-ids:hash-lit A-decls:hash-lit) A)
   (define/syntax-parse (_ B-internal-ids:hash-lit B-decls:hash-lit) B)
 
@@ -143,7 +146,15 @@
 
     [{~or (#%type-decl (#%opaque [x ...]))
           (#%type-decl (#%data [x ...] c ...))}
-     (syntax-local-bind-syntaxes (list id) #f ctx)]
+     #:with internal-id (generate-temporary id)
+     (syntax-local-bind-syntaxes (list #'internal-id) #f ctx)
+     (define rhs
+       (template
+        (make-alias-transformer (list (quote-syntax x) ...)
+                                (quote-syntax
+                                 (?#%apply-type (#%type:con internal-id) x ...))
+                                #f)))
+     (syntax-local-bind-syntaxes (list id) rhs ctx)]
 
     ;; TODO: deal with possible type parameters for aliases
     [(#%type-decl (#%alias [x ...] t))

@@ -1,6 +1,7 @@
 #lang racket/base
 (require
  "rep/sig-literals.rkt"
+ "rep/reinterpret.rkt"
  "dot.rkt"
  "namespace/reqprov.rkt"
  racket/pretty
@@ -58,8 +59,6 @@
 (define-syntax-parser λₘ
   #:datum-literals [:]
   [(_ ([x:id : {~signature A:sig}]) body:expr)
-   #:with x- (generate-temporary #'x)
-
    ;; ===========
    ;; TODO:
    ;;   - for every opaque type T in A, generate a
@@ -86,23 +85,23 @@
    ;; create a context where x is bound
    #:do [(define ctx (syntax-local-make-definition-context))
          (define (intro stx)
-           (internal-definition-context-introduce ctx stx))
+           (internal-definition-context-introduce ctx stx))]
+   #:with x- (intro (generate-temporary #'x))
 
-         (syntax-local-bind-syntaxes (list #'x-) #f ctx)
+   #:do [(syntax-local-bind-syntaxes (list #'x-) #f ctx)
          (define val-ids/exprs
            (syntax-local-bind-module #'x #'x- #'A.expansion ctx))]
 
-   #:with x-- (intro #'x-)
    #:with [body- B] (sig⇒ #'body ctx)
-   #:with B* (reintroduce-#%dot (intro #'x) #'x-- #'B ctx)
+   #:with B* (reinterpret #'B)
    #:with [[val-id val-expr] ...] val-ids/exprs
    (internal-definition-context-track
     ctx
-    (attach-sig #'(λ (x--)
+    (attach-sig #'(λ (x-)
                     (define val-id val-expr)
                     ...
                     body-)
-                #'(#%pi-sig ([x-- A.expansion]) B*)))])
+                #'(#%pi-sig ([x- A.expansion]) B*)))])
 
 (define-syntax-parser appₘ
   #:literals [#%pi-sig]

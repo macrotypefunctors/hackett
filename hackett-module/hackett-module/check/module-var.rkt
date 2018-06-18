@@ -21,6 +21,7 @@
  "../namespace/reqprov.rkt"
  "../namespace/namespace.rkt"
  (for-template "../rep/sig-literals.rkt"
+               "../rep/reinterpret.rkt"
                (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
@@ -143,14 +144,15 @@
 ;;   [List [Listof [List Id TransformerStx]]     ; transformer bindings
 ;;         [Listof [List Id Stx]]]               ; value binding
 (define (generate-module-var-bindings name internal-id s)
+  (define s* (reinterpret s))
 
   (define/syntax-parse unique-symbol (gensym (syntax-e name)))
 
   (define-values [s-internal-ids s-decls]
-    (syntax-parse s
+    (syntax-parse s*
       #:literal-sets [sig-literals]
       [(#%pi-sig . _) (values (hash) (hash))]
-      [(#%sig . _) (values (sig-internal-ids s) (sig-decls s))]))
+      [(#%sig . _) (values (sig-internal-ids s*) (sig-decls s*))]))
 
   (match-define
     (list opaque-type-keys data-type-keys alias-type-keys
