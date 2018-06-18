@@ -98,29 +98,31 @@
        (quasitemplate/loc/props this-syntax
          (?#%type:app* (#%type:con #%apply-type) a b ...))]))
 
-  (define-syntax-class u-type
+  (define-syntax-class (u-type intdef-ctx)
     #:attributes [norm]
     #:literal-sets [u-type-literals]
-    [pattern :u-type-app]
-    [pattern :u-type-path]
+    [pattern {~var || (u-type-app intdef-ctx)}]
+    [pattern {~var || (u-type-path intdef-ctx)}]
     [pattern stx #:with norm (traverse-stx/recur #'stx reinterpret)])
 
-  (define-syntax-class u-type-path
+  (define-syntax-class (u-type-path intdef-ctx)
     #:attributes [norm]
     #:literal-sets [u-type-literals]
-    [pattern (~#%type:app* (#%type:con dot:#%dot_τ ~!) mp:u-module-path (#%type:con x:id))
+    [pattern (~#%type:app* (#%type:con dot:#%dot_τ ~!) {~var mp (u-module-path intdef-ctx)} (#%type:con x:id))
              #:with stx this-syntax
              #:with norm (datum->syntax #'stx (list #'dot #'mp.norm #'x) #'stx)]
     [pattern x:id
+             ;; TODO: local-value here?
              #:with norm #'x])
 
-  (define-syntax-class u-module-path
+  (define-syntax-class (u-module-path intdef-ctx)
     #:attributes [norm]
     #:literal-sets [u-type-literals]
-    [pattern (~#%type:app* (#%type:con dot:#%dot_m ~!) mp:u-module-path (#%type:con x:id))
+    [pattern (~#%type:app* (#%type:con dot:#%dot_m ~!) {~var mp (u-module-path intdef-ctx)} (#%type:con x:id))
              #:with stx this-syntax
              #:with norm (datum->syntax #'stx (list #'dot #'mp.norm #'x) #'stx)]
     [pattern x:id
+             #:when (syntax-local-value #'x (λ () #f) intdef-ctx)
              #:with norm #'x])
 
   (define-syntax-class u-type-app
@@ -154,7 +156,7 @@
       [x:id #'x]
       [(dot:#%dot_τ mp x)
        #:with mp* (path->u-mod-path #'mp)
-       (template
+       (template/loc p
         (?#%type:app* (#%type:con dot)
                       mp*
                       (#%type:con x)))]))
@@ -165,7 +167,7 @@
       [x:id #'x]
       [(dot:#%dot_m mp x)
        #:with mp* (path->u-mod-path #'mp)
-       (template
+       (template/loc p
         (?#%type:app* (#%type:con dot)
                       mp*
                       (#%type:con x)))]))
@@ -173,6 +175,8 @@
   )
 
 (module+ test
+  (define-syntax M- #f)
+
   (begin-for-syntax
     (require rackunit)
     (check-equal?
