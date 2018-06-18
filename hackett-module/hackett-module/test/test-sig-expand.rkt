@@ -55,6 +55,49 @@
                                             X1-ref:id))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
 
+  (check-stxparse (expand-sig
+                   #'(sig
+                      (type Y)
+                      (type X = Y)
+                      (val x : X)))
+                  #:literal-sets [sig-literals u-type-literals]
+                  (~sig
+                   [#s(namespaced type Y)
+                    Y1
+                    (#%type-decl (#%opaque []))]
+                   [#s(namespaced type X)
+                    X2
+                    (#%type-decl
+                     (#%alias []
+                       (#%type:app (#%type:con #%apply-type) Y1-ref)))]
+                   [#s(namespaced value x)
+                    x3
+                    (#%val-decl (#%type:app (#%type:con #%apply-type) X2-ref))])
+                  #:when (free-identifier=? #'Y1 #'Y1-ref)
+                  #:when (free-identifier=? #'X2 #'X2-ref))
+
+  (check-stxparse (expand-sig
+                   #'(sig
+                      (type Y)
+                      (type X = Y)
+                      (val x : Y)))
+                  #:literal-sets [sig-literals u-type-literals]
+                  (~sig
+                   [#s(namespaced type Y)
+                    Y1
+                    (#%type-decl (#%opaque []))]
+                   [#s(namespaced type X)
+                    X2
+                    (#%type-decl
+                     (#%alias []
+                       (#%type:app (#%type:con #%apply-type) Y1-ref1)))]
+                   [#s(namespaced value x)
+                    x3
+                    (#%val-decl
+                     (#%type:app (#%type:con #%apply-type) Y1-ref2))])
+                  #:when (free-identifier=? #'Y1 #'Y1-ref1)
+                  #:when (free-identifier=? #'Y1 #'Y1-ref2))
+
   ;; ---------------
 
   (check-stxparse (expand-sig
