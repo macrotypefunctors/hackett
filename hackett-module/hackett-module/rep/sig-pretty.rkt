@@ -9,6 +9,7 @@
  racket/syntax
  syntax/parse
  syntax/id-table
+ syntax/parse/experimental/template
  (only-in syntax/parse [attribute @])
  hackett/private/typecheck
  "../util/stx.rkt"
@@ -104,5 +105,5 @@
        [(~#%type:app* (#%type:con #%apply-type) t:expr)
         (traverse #'t)]
        [(~#%type:app* (#%type:con #%apply-type) t:expr a ...)
-        (traverse #'(t a ...))]
+        (traverse (template (?#%type:app* t a ...)))]
        [_ (traverse-stx/recur t traverse)]))))

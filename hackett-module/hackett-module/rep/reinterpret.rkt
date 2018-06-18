@@ -11,6 +11,7 @@
  syntax/parse/define
  "../namespace/reqprov.rkt"
  "../rep/sig-literals.rkt"
+ (except-in hackett/private/type-alias type)
  (except-in hackett/private/type-language
             value-namespace-introduce type-namespace-introduce ~type)
  (rename-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
@@ -20,36 +21,50 @@
              racket/pretty
              (only-in syntax/parse [attribute @])
              syntax/parse/experimental/template
+             syntax/parse/class/local-value
+             syntax/apply-transformer
              hackett/private/util/stx
              "../namespace/namespace.rkt"
              "../util/stx-traverse.rkt"
              "../util/disappeared-use.rkt"))
 
+
+(begin-for-syntax
+
+  (define-syntax-class applicable-type
+    #:attributes [apply]
+    [pattern {~var head (local-value alias-transformer?)}
+      #:attr apply
+      (λ (args)
+        (local-apply-transformer (@ head.local-value)
+                                 #`(head #,@args)
+                                 'expression))]
+
+    [pattern (#%dot_τ {~module m:dot-accessible-path/type} ~! x:id)
+      #:do [(define key (namespaced:type (syntax-e #'x)))
+            (define type-id ((@ m.key->id) key))]
+      #:fail-unless type-id
+      (format "~a is not bound to a type within ~a"
+              (syntax-e #'x)
+              (syntax->datum #'m))
+
+      #:with a:applicable-type type-id
+      #:attr apply (compose (λ (x) (add-disappeared-use x #'m.root))
+                            (@ a.apply))]
+
+    [pattern head
+      #:attr apply
+      (λ (args)
+        (define/syntax-parse [arg ...] args)
+        (template (?#%type:app* head arg ...)))])
+
+  )
+
 (define-syntax-parser #%apply-type
   #:literals [#%dot_τ]
-
   [(_ head) #'head]
-
-  [(_ head:id arg ...+)
-   (datum->syntax
-    this-syntax
-    (cons #'head #'[arg ...])
-    this-syntax)]
-
-  [(_ (#%dot_τ {~module m:dot-accessible-path/type} ~! x:id) arg ...+)
-   #:do [(define key (namespaced:type (syntax-e #'x)))
-         (define type-id ((@ m.key->id) key))]
-   #:fail-unless type-id
-   (format "~a is not bound to a type within ~a"
-           (syntax-e #'x)
-           (syntax->datum #'m))
-   #:with head type-id
-   (add-disappeared-use
-    (datum->syntax
-     this-syntax
-     (cons #'head #'[arg ...])
-     this-syntax)
-    #'m.root)])
+  [(_ head:applicable-type arg ...+)
+   ((@ head.apply) (@ arg))])
 
 ;; A UType ("uninterpreted" type) is one of:
 ;;   - UTypeApp

@@ -7,5 +7,5 @@
 
 (def-module Take-C
   (λ ([M : C])
-    (mod)))
-
+    (mod
+      (type CI (M.C Integer)))))

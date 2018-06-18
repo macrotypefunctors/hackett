@@ -3,7 +3,13 @@
 (require "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
          "../rep/reinterpret.rkt"
-         (only-in (unmangle-in #:no-introduce hackett/base) Integer)
+         (only-in (unmangle-in #:no-introduce hackett/base) Integer ∀ ->)
+         (only-in (unmangle-in hackett/base) Integer ∀ -> #%app)
+         (only-in hackett/private/type-language
+                  ~#%type:app*
+                  ~#%type:forall*
+                  ~->*)
+
          (unmangle-in #:no-introduce "../sig.rkt")
          (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
          (for-syntax racket/base
@@ -117,6 +123,40 @@
                                              X1-ref)
                                  (#%type:con Integer)))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
+
+  ;; ---------------
+
+  (check-stxparse (sig (type (C A))
+                       (val make : (∀ [A] {A -> (C A)})))
+                  #:literal-sets [sig-literals u-type-literals]
+                  #:literals [Integer]
+                  (~sig
+                   [#s(namespaced type C) C1 _]
+                   [#s(namespaced value make)
+                    mk1
+                    (#%val-decl
+                     {~#%type:forall* [A]
+                       {~->* A-ref1
+                             {~#%type:app* (#%type:con #%apply-type) C-ref A-ref2}}})])
+                  #:when (free-identifier=? #'C1 #'C-ref)
+                  #:when (free-identifier=? #'A #'A-ref1)
+                  #:when (free-identifier=? #'A #'A-ref2))
+
+  (check-stxparse (reinterpret
+                   (sig (type (C A))
+                        (val make : (∀ [A] {A -> (C A)}))))
+                  #:literal-sets [sig-literals u-type-literals]
+                  #:literals [Integer]
+                  (~sig
+                   [#s(namespaced type C) C1 _]
+                   [#s(namespaced value make)
+                    mk1
+                    (#%val-decl
+                     {~#%type:forall* [A]
+                       {~->* A-ref1 (#%apply-type C-ref A-ref2)}})])
+                  #:when (free-identifier=? #'C1 #'C-ref)
+                  #:when (free-identifier=? #'A #'A-ref1)
+                  #:when (free-identifier=? #'A #'A-ref2))
 
   ;; ---------------
 
