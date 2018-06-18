@@ -45,18 +45,6 @@
            (type X)
            (val x : X))))
 
-    (check-stxparse S
-                    #:literal-sets [sig-literals u-type-literals]
-                    (#%sig
-                     {~hash [{~datum #s(namespaced type X)} X1]
-                            [{~datum #s(namespaced value x)} x2]}
-                     {~hash [{~datum #s(namespaced type X)}
-                             (#%type-decl (#%opaque []))]
-                            [{~datum #s(namespaced value x)}
-                             (#%val-decl (#%type:app (#%type:con #%apply-type)
-                                                     X1-ref))]})
-                    #:when (free-identifier=? #'X1 #'X1-ref))
-
     (check sig-matches?
            S
            (expand-sig
