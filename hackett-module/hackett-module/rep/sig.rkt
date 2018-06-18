@@ -117,11 +117,7 @@
        (template
         (make-alias-transformer
          (list (quote-syntax x) ...)
-         (quote-syntax (?#%type:app*
-                        (#%type:con #%apply-type)
-                        path
-                        x
-                        ...))
+         (quote-syntax (?#%apply-type path x ...))
          '#f)))
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)]
 
