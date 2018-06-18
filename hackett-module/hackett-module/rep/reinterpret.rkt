@@ -125,10 +125,13 @@
              #:when (syntax-local-value #'x (λ () #f) intdef-ctx)
              #:with norm #'x])
 
-  (define-syntax-class u-type-app
+  (define-syntax-class (u-type-app intdef-ctx)
     #:attributes [norm]
     #:literal-sets [u-type-literals]
-    [pattern (~#%type:app* (#%type:con app:#%apply-type ~!) tp:u-type-path arg:u-type ...)
+    [pattern (~#%type:app* (#%type:con app:#%apply-type ~!)
+                           {~var tp (u-type-path intdef-ctx)}
+                           {~var arg (u-type intdef-ctx)}
+                           ...)
              #:with stx this-syntax
              #:with norm
              (datum->syntax #'stx
@@ -137,17 +140,18 @@
 
   ;; Reinterpret the given uninterpreted type, so that the resulting type
   ;; can be expanded into a valid Hackett type.
-  ;; UType -> TypeStx
-  (define (reinterpret-u-type ut)
+  ;; UType [IntDefCtx] -> TypeStx
+  (define (reinterpret-u-type ut [intdef-ctx #f])
     (syntax-parse ut
-      [u:u-type #'u.norm]))
+      [{~var u (u-type intdef-ctx)} #'u.norm]))
 
-  ;; Stx -> Stx
+  ;; Stx [IntDefCtx] -> Stx
   ;; where UTypes inside are reinterpreted
-  (define (reinterpret stx)
-    (syntax-parse stx
-      [u:u-type #'u.norm]
-      [_ (traverse-stx/recur stx reinterpret)]))
+  (define (reinterpret stx [intdef-ctx #f])
+    (let reinterpret ([stx stx])
+      (syntax-parse stx
+        [{~var u (u-type intdef-ctx)} #'u.norm]
+        [_ (traverse-stx/recur stx reinterpret)])))
 
 
   (define (path->u-type-path p)
