@@ -3,16 +3,20 @@
 (require syntax/parse/define
          syntax/macro-testing
          "../namespace/reqprov.rkt"
+         hackett/private/type-language
          (only-in (unmangle-in hackett/private/kernel) ∀ -> #%app)
          (only-in hackett/private/base Integer)
          (unmangle-in #:no-introduce "../sig.rkt")
          (unmangle-in "../dot.rkt")
          "../rep/sig-literals.rkt"
+         "../rep/reinterpret.rkt"
          (for-syntax racket/base
                      rackunit
                      rackunit/text-ui
                      syntax/parse
                      syntax/parse/define
+                     "../private/test/check-stxparse.rkt"
+                     "../util/stx.rkt"
                      "../check/sig-matches.rkt"
                      "../rep/sig.rkt"
                      ))
