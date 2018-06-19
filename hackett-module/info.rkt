@@ -9,5 +9,6 @@
     "syntax-classes-lib"
     "struct-like-struct-type-property"
     "rackunit-lib"
+    "seq-no-order"
     ))
 
