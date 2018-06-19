@@ -13,7 +13,8 @@
          (only-in hackett/private/adt type-constructor-spec))
 
 (provide type
-         (for-syntax make-alias-transformer))
+         (for-syntax make-alias-transformer
+                     alias-transformer?))
 
 (begin-for-syntax
   ; Alias transformer bindings; use the make-alias-transformer constructor instead of creating
@@ -66,4 +67,3 @@
                (quote-syntax type-template-.expansion)
                'fixity)))
         (internal-definition-context-track intdef-ctx))])
-
