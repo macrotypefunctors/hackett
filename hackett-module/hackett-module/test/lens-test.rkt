@@ -264,13 +264,64 @@
 
 ;; ---------------------------------------------------------
 
+(def-module Lens4
+  (mod
+   (type (Lens CA CB A B)
+         {CA -> (Tuple A {B -> CB})})
+
+   (: make-lens (∀ [CA CB A B]
+                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
+   (defn make-lens
+     [[get set ca] (Tuple (get ca) (set ca))])
+
+   (: get (∀ [CA CB A B]
+             {(Lens CA CB A B) -> CA -> A}))
+   (defn get
+     [[l ca] (case (l ca)
+               [(Tuple a _) a])])
+
+   (: set (∀ [CA CB A B]
+             {(Lens CA CB A B) -> CA -> B -> CB}))
+   (defn set
+     [[l ca] (case (l ca)
+               [(Tuple _ f) f])])
+
+   (: modify (∀ [CA CB A B]
+                {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
+   (defn modify
+     [[l ca a->b] (case (l ca)
+                    [(Tuple a f) (f (a->b a))])])
+
+   (: thrush (∀ [CCA CCB CA CB A B]
+                {(Lens CCA CCB CA CB)
+                 ->
+                 (Lens CA CB A B)
+                 ->
+                 (Lens CCA CCB A B)}))
+   (defn thrush
+     [[l1 l2 cca]
+      (case (l1 cca)
+        [(Tuple ca cb->ccb)
+         (case (l2 ca)
+           [(Tuple a b->cb)
+            (Tuple a {cb->ccb |.| b->cb})])])])
+   ))
+
+
+(def-module Lens4*
+  (seal Lens4 :> LENS))
+
+;; ---------------------------------------------------------
+
 (def-module Tuple-Lens1 (Tuple-Lens Lens1))
 (def-module Tuple-Lens2 (Tuple-Lens Lens2))
 (def-module Tuple-Lens3 (Tuple-Lens Lens3))
+(def-module Tuple-Lens4 (Tuple-Lens Lens4))
 (def-module Pong-Lens1 (Pong-Lens Lens1))
 (def-module Pong-Lens2 (Pong-Lens Lens2))
 (def-module Pong-Lens3 (Pong-Lens Lens3))
+(def-module Pong-Lens4 (Pong-Lens Lens4))
 
-(test (do Tuple-Lens1.test Tuple-Lens2.test Tuple-Lens3.test
-          Pong-Lens1.test Pong-Lens2.test Pong-Lens3.test))
+(test (do Tuple-Lens1.test Tuple-Lens2.test Tuple-Lens3.test Tuple-Lens4.test
+          Pong-Lens1.test Pong-Lens2.test Pong-Lens3.test Pong-Lens4.test))
 
