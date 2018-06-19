@@ -16,7 +16,7 @@
     (type T)
     (val compare : {T -> T -> Order})))
 
-#;
+
 (def-signature MAKE_MAP
   (Π ([Elem : ORD])
     (sig
@@ -27,7 +27,6 @@
       (val elem? : {Elem.T -> T -> Bool}))))
 
 ; =====================================
-#|
 
 (def-module Foo
   (seal (mod (def x 3))
@@ -42,4 +41,4 @@
 (def-module N-empty
   (seal N :> EMPTY))
 
-|#
+

@@ -35,3 +35,10 @@
 
 
 (def-module C* (seal ((C*/AB A*) B*) :> C))
+
+
+(def-signature TYPE (sig (type T)))
+
+(def-signature TYPE-IDENTITY
+  (Π ([V : TYPE])
+    (where TYPE T = V.T)))
