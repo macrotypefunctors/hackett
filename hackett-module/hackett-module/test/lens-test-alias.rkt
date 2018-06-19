@@ -1,6 +1,8 @@
 #lang hackett-module
 
-(require hackett-module/private/test)
+(require hackett-module/private/test
+         (rename-in hackett-module/rep/apply-type
+                    [#%apply-type #%hackett-type:#%apply-type]))
 (define-binary-check ==! ([X] [(Eq X) (Show X)] X) == show)
 
 (def-module M
@@ -47,6 +49,10 @@
               (Tuple a {cb->ccb |.| b->cb})])]))])
    ))
 
+(def-module N
+  (mod
+   (type (-> a b) (M.Lens a a b b))))
+
 ;; (C X) = (Tuple X Y)
 (: tuple-fst-lens (∀ [X1 X2 Y] (M.Lens (Tuple X1 Y) (Tuple X2 Y) X1 X2)))
 (def tuple-fst-lens
@@ -58,6 +64,9 @@
   (λ* [[(Tuple fst snd)] (Tuple snd (λ (snd) (Tuple fst snd)))]))
 
 (def snd-of-fst-lens (M.lens-thrush tuple-fst-lens tuple-snd-lens))
+
+(: l1 (∀ [X Y] {(Tuple X Y) N.-> X}))
+(def l1 tuple-fst-lens)
 
 (test {(M.get snd-of-fst-lens (Tuple (Tuple 39 "a") (Tuple 51 "b")))
        ==!
@@ -71,4 +80,7 @@
               (List 3 1 4 1 6 1 7))
        ==!
        (Tuple (Tuple 39 (List 3 1 4 1 6 1 7)) (Tuple 51 "b"))})
+
+(test {(M.get l1 (Tuple 51 "b")) ==! 51})
+(test {(M.set l1 (Tuple 51 "b") 64) ==! (Tuple 64 "b")})
 
