@@ -285,7 +285,8 @@
 
   ;; (#%val-decl type)
   [pattern (val-decl:#%val-decl val-type)
-           #:with {~var val-type* (type intdef-ctx)} (reinterpret #'val-type)
+           #:with {~var val-type* (type intdef-ctx)}
+           (reinterpret #'val-type intdef-ctx)
            #:attr expansion (syntax/loc/props this-syntax
                               (val-decl val-type*.expansion))
            #:attr residual (residual #'[val-type*.residual expansion]
@@ -293,7 +294,8 @@
 
   ;; (#%constructor-decl type)
   [pattern (constr-decl:#%constructor-decl constr-type)
-           #:with {~var constr-type* (type intdef-ctx)} (reinterpret #'constr-type)
+           #:with {~var constr-type* (type intdef-ctx)}
+           (reinterpret #'constr-type intdef-ctx)
            #:attr expansion (syntax/loc/props this-syntax
                               (constr-decl constr-type*.expansion))
            #:attr residual (residual #'[constr-type*.residual expansion]
@@ -311,7 +313,7 @@
 
            #:with [x- ...] (map intro (attribute x))
            #:with {~var alias-type- (type intdef-ctx*)}
-           (intro (reinterpret #'alias-type))
+           (intro (reinterpret #'alias-type intdef-ctx))
 
            #:attr expansion (~>> (syntax/loc/props this-syntax
                                    (type-decl (alias [x- ...] alias-type-.expansion)))
