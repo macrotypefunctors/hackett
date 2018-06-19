@@ -2,7 +2,7 @@
 
 (require "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
-         "../rep/reinterpret.rkt"
+         "../rep/apply-type.rkt"
          (only-in (unmangle-in #:no-introduce hackett/base) Integer ∀ ->)
          (only-in (unmangle-in hackett/base) Integer ∀ -> #%app)
          (only-in hackett/private/type-language

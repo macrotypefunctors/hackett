@@ -36,7 +36,7 @@
                        (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                        (rename-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                        "sig-literals.rkt"
-                       "reinterpret.rkt"))
+                       "apply-type.rkt"))
 
 ; helper for expanding signatures; combines "residual" properties
 (define (residual origs id)
@@ -143,9 +143,7 @@
      (λ (stx)
        (let traverse ([stx stx])
          (if (has-prop? stx)
-             (syntax-parse stx
-               [(~#%apply-type _ x ...)
-                #`(#%apply-type #,path-to-id x ...)])
+             (u-type-app->type stx)
              (traverse-stx/recur stx traverse))))]
 
     [(#%module-decl (#%pi-sig . _))
