@@ -121,7 +121,23 @@
                   #:literal-sets [sig-literals u-type-literals]
                   #:literals [Integer]
                   (~sig
-                   [#s(namespaced type C) C1 _]
+                   [#s(namespaced type C) C1 (#%type-decl (#%opaque _))]
+                   [#s(namespaced value make)
+                    mk1
+                    (#%val-decl
+                     {~#%type:forall* [A]
+                       {~->* A-ref1
+                             {~#%type:app* C-ref A-ref2}}})])
+                  #:when (free-identifier=? #'C1 #'C-ref)
+                  #:when (free-identifier=? #'A #'A-ref1)
+                  #:when (free-identifier=? #'A #'A-ref2))
+
+  (check-stxparse (sig (type (C A) = A)
+                       (val make : (∀ [A] {A -> (C A)})))
+                  #:literal-sets [sig-literals u-type-literals]
+                  #:literals [Integer]
+                  (~sig
+                   [#s(namespaced type C) C1 (#%type-decl (#%alias _ _))]
                    [#s(namespaced value make)
                     mk1
                     (#%val-decl
