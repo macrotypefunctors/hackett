@@ -42,3 +42,15 @@
 (def-signature TYPE-IDENTITY
   (Π ([V : TYPE])
     (where TYPE T = V.T)))
+
+;; ---------------------------------------------------------
+
+(def-signature AB
+  (sig
+   (type A)
+   (type B)))
+
+(def-signature S
+  (Π ([T : TYPE])
+    (where (where AB A = T.T) B = T.T)))
+

@@ -4,6 +4,7 @@
          (for-syntax reinterpret
                      u-type-literals
                      ?#%apply-type
+                     ~#%apply-type
                      path->u-type-path
                      path->u-mod-path))
 
@@ -26,7 +27,9 @@
              hackett/private/util/stx
              "../namespace/namespace.rkt"
              "../util/stx-traverse.rkt"
-             "../util/disappeared-use.rkt"))
+             "../util/disappeared-use.rkt"
+             (for-syntax racket/base
+                         syntax/parse)))
 
 
 (begin-for-syntax
@@ -97,6 +100,15 @@
       [(_ a b ...)
        (quasitemplate/loc/props this-syntax
          (?#%type:app* (#%type:con #%apply-type) a b ...))]))
+
+  (define-syntax ~#%apply-type
+    (pattern-expander
+     (syntax-parser
+       [(_ . lpat)
+        (syntax/loc this-syntax
+          (~#%type:app* ({~literal #%type:con} {~literal #%apply-type})
+                        .
+                        lpat))])))
 
   (define-syntax-class u-type
     #:attributes [norm]

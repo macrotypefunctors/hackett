@@ -44,7 +44,7 @@
                     (#%type-decl (#%opaque []))]
                    [#s(namespaced value x)
                     x2
-                    (#%val-decl X1-ref)])
+                    (#%val-decl (#%apply-type X1-ref:id))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
 
   (check-stxparse (expand-sig
@@ -57,7 +57,7 @@
                     (#%type-decl (#%opaque []))]
                    [#s(namespaced value x)
                     x2
-                    (#%val-decl X1-ref:id)])
+                    (#%val-decl (#%apply-type X1-ref:id))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
 
   (check-stxparse (expand-sig
@@ -72,10 +72,10 @@
                     (#%type-decl (#%opaque []))]
                    [#s(namespaced type X)
                     X2
-                    (#%type-decl (#%alias [] Y1-ref))]
+                    (#%type-decl (#%alias [] (#%apply-type Y1-ref:id)))]
                    [#s(namespaced value x)
                     x3
-                    (#%val-decl X2-ref)])
+                    (#%val-decl (#%apply-type X2-ref:id))])
                   #:when (free-identifier=? #'Y1 #'Y1-ref)
                   #:when (free-identifier=? #'X2 #'X2-ref))
 
@@ -91,10 +91,10 @@
                     (#%type-decl (#%opaque []))]
                    [#s(namespaced type X)
                     X2
-                    (#%type-decl (#%alias [] Y1-ref1))]
+                    (#%type-decl (#%alias [] (#%apply-type Y1-ref1:id)))]
                    [#s(namespaced value x)
                     x3
-                    (#%val-decl Y1-ref2)])
+                    (#%val-decl (#%apply-type Y1-ref2:id))])
                   #:when (free-identifier=? #'Y1 #'Y1-ref1)
                   #:when (free-identifier=? #'Y1 #'Y1-ref2))
 
@@ -111,7 +111,7 @@
                     (#%type-decl (#%opaque [a1]))]
                    [#s(namespaced value x)
                     x2
-                    (#%val-decl {~#%type:app* X1-ref (#%type:con Integer)})])
+                    (#%val-decl (#%apply-type X1-ref:id (#%type:con Integer)))])
                   #:when (free-identifier=? #'X1 #'X1-ref))
 
   ;; ---------------
@@ -127,7 +127,7 @@
                     (#%val-decl
                      {~#%type:forall* [A]
                        {~->* A-ref1
-                             {~#%type:app* C-ref A-ref2}}})])
+                             (#%apply-type C-ref:id A-ref2:id)}})])
                   #:when (free-identifier=? #'C1 #'C-ref)
                   #:when (free-identifier=? #'A #'A-ref1)
                   #:when (free-identifier=? #'A #'A-ref2))
@@ -142,8 +142,8 @@
                     mk1
                     (#%val-decl
                      {~#%type:forall* [A]
-                       {~->* A-ref1
-                             {~#%type:app* C-ref A-ref2}}})])
+                       {~->* A-ref1:id
+                             (#%apply-type C-ref:id A-ref2:id)}})])
                   #:when (free-identifier=? #'C1 #'C-ref)
                   #:when (free-identifier=? #'A #'A-ref1)
                   #:when (free-identifier=? #'A #'A-ref2))
@@ -163,7 +163,7 @@
                                      (#%type-decl (#%opaque []))]})]
                    [#s(namespaced value x)
                     x3
-                    (#%val-decl (#%dot_τ M1-ref {~datum X}))])
+                    (#%val-decl (#%apply-type (#%dot_τ M1-ref:id {~datum X})))])
                   #:when (free-identifier=? #'M1 #'M1-ref))
 
   )

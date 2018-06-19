@@ -13,6 +13,7 @@
          racket/list
          racket/match
          syntax/parse
+         syntax/parse/experimental/template
          syntax/parse/define
          (only-in syntax/parse [attribute @])
          syntax/intdef
@@ -29,9 +30,13 @@
          "../namespace/reqprov.rkt"
          (for-syntax racket/base)
          (for-template racket/base
-                       (only-in "../dot/dot-t.rkt" reintroduce-#%dot)
+                       (only-in hackett/private/type-alias
+                                make-alias-transformer)
+                       (rename-in (unmangle-in "../dot/dot-e.rkt") [#%dot #%dot_e])
+                       (rename-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                        (rename-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
-                       "sig-literals.rkt"))
+                       "sig-literals.rkt"
+                       "reinterpret.rkt"))
 
 ; helper for expanding signatures; combines "residual" properties
 (define (residual origs id)
@@ -95,21 +100,53 @@
 
 ;; ---------------------------------------------
 
+;; syntax-local-declare-decl :
 ;; Id PartialDecl ModulePath IntDefCtx -> [Signature -> SignatureStx]
+
 ;; declares that the decl exists without binding what its "equal to".
 ;; the root of `path-to-id` should already have the scope introduced
 ;; for the context its expanding to.
 ;; returns a function to call on an expanded signature after fully
 ;; expanding it.
+
+;; The things this defines the decls to expand into are *uninterpreted*,
+;; so sig-expansion must reinterpret the result after expanding using
+;; this environment.
 (define (syntax-local-declare-decl id decl path-to-id intdef-ctx)
   (syntax-parse decl
     #:context 'syntax-local-declare-decl
     #:literal-sets [sig-literals]
-    [{~or (#%type-decl . _)
-          (#%val-decl . _)
+    [{~or (#%val-decl . _)
           (#%constructor-decl . _)}
-     (syntax-local-bind-syntaxes (list id) #f intdef-ctx)
+     #:with path path-to-id
+     (define rhs
+       #'(make-variable-like-transformer (quote-syntax path)))
+     (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)
      identity]
+
+    [(#%type-decl {~or (#%opaque [x ...])
+                       (#%alias [x ...] _)
+                       (#%data [x ...] . _)})
+     #:with path (path->u-type-path path-to-id)
+     #:do [(define prop (gensym))
+           (define (has-prop? stx)
+             (and (syntax? stx) (syntax-property stx prop)))]
+     #:with t (syntax-property (template (?#%apply-type path x ...))
+                               prop
+                               #t)
+     (define rhs
+       #'(make-alias-transformer
+          (list (quote-syntax x) ...)
+          (quote-syntax t)
+          '#f))
+     (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)
+     (λ (stx)
+       (let traverse ([stx stx])
+         (if (has-prop? stx)
+             (syntax-parse stx
+               [(~#%apply-type _ x ...)
+                #`(#%apply-type #,path-to-id x ...)])
+             (traverse-stx/recur stx traverse))))]
 
     [(#%module-decl (#%pi-sig . _))
      (syntax-local-bind-syntaxes (list id) #f intdef-ctx)
@@ -121,10 +158,13 @@
      (define-values [keys tmp-ids reintros]
        (for/lists (keys tmp-ids reintros)
                   ([(local-key decl) (in-hash (@ decls.value))])
+         (define sym (namespaced-symbol local-key))
          (define tmp-id
-           (generate-temporary/1num (namespaced-symbol local-key)))
+           (generate-temporary/1num sym))
+         (define dot
+           (decl-dot-form decl))
          (define local-path
-           #`(#%dot_m #,path-to-id #,(namespaced-symbol local-key)))
+           #`(#,dot #,path-to-id #,sym))
          (define nested-reintro
            (syntax-local-declare-decl tmp-id decl local-path intdef-ctx))
          (values local-key tmp-id nested-reintro)))
@@ -146,6 +186,15 @@
        (define id- (internal-definition-context-introduce intdef-ctx id))
        (define stx- (reintro stx))
        (reintroduce-#%dot id- path-to-id stx- intdef-ctx))]))
+
+
+;; PartialDecl -> Identifier
+(define (decl-dot-form decl)
+  (syntax-parse decl
+    #:literal-sets [sig-literals]
+    [(#%type-decl . _) #'#%dot_τ]
+    [(#%module-decl . _) #'#%dot_m]
+    [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
 
 
 (struct declared-module-var [module-sym key->tmp-id]
@@ -205,14 +254,20 @@
                    (internal-definition-context-introduce intdef-ctx* stx))
 
                  ;; bind the ids and build up the function together
-                 (define reintro-dots
-                   (apply compose
-                     (for/list ([(key id) (in-hash (@ internal-ids.value))])
-                       (define id- (intro id))
-                       (define decl (hash-ref (@ decls.value) key))
-                       (syntax-local-declare-decl id decl id- intdef-ctx*))))]
+                 (define-values [new-internal-ids reintro-dotss]
+                   (for/fold ([new-internal-ids (hash)]
+                              [reintro-dotss '()])
+                             ([(key id) (in-hash (@ internal-ids.value))])
+                     (define id- (intro (generate-temporary/1num id)))
+                     (define decl (hash-ref (@ decls.value) key))
+                     (syntax-local-bind-syntaxes (list id-) #f intdef-ctx*)
+                     (define nested-reintro
+                       (syntax-local-declare-decl id decl id- intdef-ctx*))
+                     (values (hash-set new-internal-ids key id-)
+                             (cons nested-reintro reintro-dotss))))
+                 (define reintro-dots (apply compose reintro-dotss))]
 
-           #:with internal-ids- (intro #'internal-ids)
+           #:with internal-ids- new-internal-ids
            #:with [{~var decl- (expanded-decl intdef-ctx*)} ...]
            (map intro (attribute decls.values))
            #:with decls-expansion-
