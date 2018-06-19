@@ -13,6 +13,7 @@
 
 (require syntax/parse/define
          "rep/sig-literals.rkt"
+         "rep/reinterpret.rkt"
          "namespace/reqprov.rkt"
          (except-in hackett/private/type-language
                     ~type
@@ -78,7 +79,7 @@
       #:with [c-type ...] (type-namespace-introduce
                            (template
                             [(?#%type:forall* [arg ...]
-                               (?->* c.arg ... (?#%type:app* X arg ...)))
+                               (?->* c.arg ... (#%apply-type X arg ...)))
                              ...]))
       #:with [[key id decl] ...]
       #`[[X-key X (#%type-decl (#%data [arg ...] c-tag ...))]

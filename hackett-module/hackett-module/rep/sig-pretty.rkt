@@ -8,14 +8,16 @@
  racket/pretty
  racket/syntax
  syntax/parse
+ syntax/parse/experimental/template
  syntax/id-table
  (only-in syntax/parse [attribute @])
- (only-in hackett/private/typecheck type->string type-literals)
+ (only-in hackett/private/typecheck type->string type-literals ?#%type:app*)
  "../util/stx.rkt"
  "../util/stx-traverse.rkt"
  "../util/stx-subst.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
+               "reinterpret.rkt"
                (only-in (unmangle-in #:only "../dot/dot-m.rkt")
                         [#%dot #%dot_m])
                (only-in (unmangle-in #:only "../dot/dot-t.rkt")
@@ -90,7 +92,11 @@
   (type->string
    (let traverse ([t t])
      (syntax-parse t
-       #:literals [#%dot_m #%dot_τ]
+       #:literals [#%dot_m #%dot_τ #%apply-type]
+       [(#%apply-type c:expr a:id ...)
+        #:with c* (traverse #'c)
+        #:with [a* ...] (map traverse (@ a))
+        (template (?#%type:app* c* a* ...)) ]
        [(#%dot_m m:expr x:id)
         (format-id #f "~a.~a"
                    (syntax->datum (traverse #'m))

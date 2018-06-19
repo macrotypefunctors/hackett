@@ -21,6 +21,7 @@
  "../namespace/reqprov.rkt"
  "../namespace/namespace.rkt"
  (for-template "../rep/sig-literals.rkt"
+               "../rep/reinterpret.rkt"
                (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
@@ -118,7 +119,7 @@
                [(type-decl:#%type-decl (#%opaque [x:id ...+]))
                 ;#:with sym (namespaced-symbol key)
                 #:with d-id ((@ self-type.key->id) key)
-                #'(type-decl (#%alias [x ...] (d-id x ...)))]
+                #'(type-decl (#%alias [x ...] (#%apply-type d-id x ...)))]
 
                [(mod-decl:#%module-decl submod-signature)
                 ; #:with sym (namespaced-symbol key)
