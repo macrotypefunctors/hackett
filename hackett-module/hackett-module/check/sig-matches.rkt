@@ -46,8 +46,8 @@
 ;; PiSig PiSig -> Boolean
 ;; the signatures A and B should already be expanded
 (define (pi-sig-matches? A B)
-  (define/syntax-parse (_ ([A-x A-in]) A-out) (reinterpret A))
-  (define/syntax-parse (_ ([B-x B-in]) B-out) (reinterpret B))
+  (define/syntax-parse (_ ([A-x A-in]) A-out) A)
+  (define/syntax-parse (_ ([B-x B-in]) B-out) B)
   (and
    ;; the "in" is contravariant
    (signature-matches? #'B-in #'A-in)
@@ -72,11 +72,9 @@
 
 ;; Sig Sig -> Boolean
 ;; the signatures should be already expanded.
-(define (sig-matches? A/u B/u)
-  (define A (reinterpret A/u))
-  (define B (reinterpret B/u))
-  (define/syntax-parse (_ A-internal-ids:hash-lit A-decls:hash-lit) A)
-  (define/syntax-parse (_ B-internal-ids:hash-lit B-decls:hash-lit) B)
+(define (sig-matches? A B)
+  (define A-internal-ids (sig-internal-ids A))
+  (define B-internal-ids (sig-internal-ids B))
 
   ;; A Common is an Identifier to be bound in the extended common
   ;; environment that will be used for checking the components against
@@ -88,12 +86,12 @@
         ([acc (hash)]
          [acc
           (for/fold ([acc acc])
-                    ([k (in-hash-keys (@ A-internal-ids.value))]
+                    ([k (in-hash-keys A-internal-ids)]
                      #:when (not (hash-has-key? acc k)))
             (hash-set acc k (generate-temporary k)))]
          [acc
           (for/fold ([acc acc])
-                    ([k (in-hash-keys (@ B-internal-ids.value))]
+                    ([k (in-hash-keys B-internal-ids)]
                      #:when (not (hash-has-key? acc k)))
             (hash-set acc k (generate-temporary k)))])
       acc))
@@ -110,14 +108,14 @@
     (intro
      (signature-substs
       A
-      (for/free-id-table ([(key id) (in-hash (@ A-internal-ids.value))])
+      (for/free-id-table ([(key id) (in-hash A-internal-ids)])
         (values id (hash-ref key->common key))))))
 
   (define B*
     (intro
      (signature-substs
       B
-      (for/free-id-table ([(key id) (in-hash (@ B-internal-ids.value))])
+      (for/free-id-table ([(key id) (in-hash B-internal-ids)])
         (values id (hash-ref key->common key))))))
 
   (for ([(key decl) (in-hash (sig-decls A*))])
