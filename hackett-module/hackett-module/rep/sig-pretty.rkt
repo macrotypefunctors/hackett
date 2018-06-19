@@ -17,7 +17,7 @@
  "../util/stx-subst.rkt"
  "../namespace/reqprov.rkt"
  (for-template "sig-literals.rkt"
-               "reinterpret.rkt"
+               "apply-type.rkt"
                (only-in (unmangle-in #:only "../dot/dot-m.rkt")
                         [#%dot #%dot_m])
                (only-in (unmangle-in #:only "../dot/dot-t.rkt")

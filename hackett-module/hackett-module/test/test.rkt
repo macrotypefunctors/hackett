@@ -9,7 +9,6 @@
          (unmangle-in #:no-introduce "../sig.rkt")
          (unmangle-in "../dot.rkt")
          "../rep/sig-literals.rkt"
-         "../rep/reinterpret.rkt"
          (for-syntax racket/base
                      rackunit
                      rackunit/text-ui
@@ -159,6 +158,6 @@
          (sig
           (val = : {N19108.Nat -> N19108.Nat -> B17106.Boool})
           (val + : {N19108.Nat -> N19108.Nat -> N19108.Nat})))))
-  
+
 
   )

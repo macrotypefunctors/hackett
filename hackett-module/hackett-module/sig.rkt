@@ -13,7 +13,7 @@
 
 (require syntax/parse/define
          "rep/sig-literals.rkt"
-         "rep/reinterpret.rkt"
+         "rep/apply-type.rkt"
          "namespace/reqprov.rkt"
          (except-in hackett/private/type-language
                     ~type

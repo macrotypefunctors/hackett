@@ -21,7 +21,7 @@
  "../namespace/reqprov.rkt"
  "../namespace/namespace.rkt"
  (for-template "../rep/sig-literals.rkt"
-               "../rep/reinterpret.rkt"
+               "../rep/apply-type.rkt"
                (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
