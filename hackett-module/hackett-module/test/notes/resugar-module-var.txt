@@ -1,0 +1,14 @@
+
+we need to turn opaque-type-transformers into alias-transformers
+instead of var-like-transformers so that #%type:app isn't recklessly
+inserted. one justifaction for this is that opaque types actually
+cannot be curried, since they may be "hiding" a type alias, not a data
+type.
+
+opaque types should expand into ((#%type:con #%apply-type) ...); a
+u-type-app just like what we do in rep/sig.rkt. then we can resugar
+them and the result will be the correct representation.
+
+it may be nice if they shared a gensym property, so that λm and mod
+can more easily call resugar without having to know of every type that
+needs resugaring.
