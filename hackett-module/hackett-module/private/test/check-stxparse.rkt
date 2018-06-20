@@ -21,7 +21,8 @@
       ...)
    #:with stx this-syntax
    (quasisyntax/loc this-syntax
-     (let ([actual-val actual-expr])
+     (test-begin
+      (let ([actual-val actual-expr])
        (with-check-info*
         (list (make-check-name 'check-stxparse)
               (make-check-location
@@ -37,5 +38,5 @@
                                 [expected-pat
                                  (and pass-expr ...)]
                                 [_
-                                 #false]))))))))])
+                                 #false])))))))))])
 

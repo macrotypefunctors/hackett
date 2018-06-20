@@ -100,6 +100,19 @@
 
   ;; ---------------
 
+  (check-stxparse (sig (type (X a))
+                       (val x : (X Integer)))
+                  #:literal-sets [sig-literals u-type-literals]
+                  #:literals [Integer]
+                  (~sig
+                   [#s(namespaced type X)
+                    X1
+                    (#%type-decl (#%opaque [a1]))]
+                   [#s(namespaced value x)
+                    x2
+                    (#%val-decl (#%apply-type X1-ref:id (#%type:con Integer)))])
+                  #:when (free-identifier=? #'X1 #'X1-ref))
+
   (check-stxparse (expand-sig
                    (sig (type (X a))
                         (val x : (X Integer))))
