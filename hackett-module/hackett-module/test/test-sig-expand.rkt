@@ -3,8 +3,8 @@
 (require "../namespace/reqprov.rkt"
          "../rep/sig-literals.rkt"
          "../rep/apply-type.rkt"
-         (only-in (unmangle-in #:no-introduce hackett/base) Integer ∀ ->)
-         (only-in (unmangle-in hackett/base) Integer ∀ -> #%app)
+         (only-in (unmangle-in #:no-introduce hackett-module) Integer ∀ ->)
+         (only-in (unmangle-in hackett-module) Integer ∀ -> #%app)
          (only-in hackett/private/type-language
                   ~#%type:app*
                   ~#%type:forall*
@@ -165,5 +165,19 @@
                     x3
                     (#%val-decl (#%apply-type (#%dot_τ M1-ref:id {~datum X})))])
                   #:when (free-identifier=? #'M1 #'M1-ref))
+
+  ;; --------------------
+
+  (check-stxparse (expand-sig
+                   (pi ([S : (sig (type (T a)))])
+                       (sig (val x : ((#%dot_τ S T) Integer)))))
+                  #:literals [Integer]
+                  #:literal-sets [sig-literals u-type-literals]
+                  (#%pi-sig
+                   ([_ _])
+                   (~sig
+                    [#s(namespaced value x)
+                     x1
+                     (#%val-decl (#%apply-type S.T-ref (#%type:con Integer)))])))
 
   )
