@@ -93,7 +93,7 @@
    (let traverse ([t t])
      (syntax-parse t
        #:literals [#%dot_m #%dot_τ #%apply-type]
-       [(#%apply-type c:expr a:id ...)
+       [(#%apply-type c:expr a:expr ...)
         #:with c* (traverse #'c)
         #:with [a* ...] (map traverse (@ a))
         (template (?#%type:app* c* a* ...)) ]
