@@ -28,6 +28,7 @@
          "../prop-dot-accessible.rkt"
          "../prop-reintroducible-dot-type.rkt"
          "../namespace/reqprov.rkt"
+         "../rep/resugar.rkt"
          (for-syntax racket/base)
          (for-template racket/base
                        (only-in hackett/private/type-alias
@@ -128,23 +129,17 @@
                        (#%alias [x ...] _)
                        (#%data [x ...] . _)})
      #:with path (path->u-type-path path-to-id)
-     #:do [(define prop (gensym))
-           (define (has-prop? stx)
-             (and (syntax? stx) (syntax-property stx prop)))]
-     #:with t (syntax-property (template (?#%apply-type path x ...))
-                               prop
-                               #t)
+     #:with t (template (?#%apply-type path x ...))
      (define rhs
-       #'(make-alias-transformer
+       #'(make-declared-type-transformer
           (list (quote-syntax x) ...)
-          (quote-syntax t)
-          '#f))
+          (quote-syntax t)))
      (syntax-local-bind-syntaxes (list id) rhs intdef-ctx)
+
      (λ (stx)
-       (let traverse ([stx stx])
-         (if (has-prop? stx)
-             (u-type-app->type stx)
-             (traverse-stx/recur stx traverse))))]
+       (resugar (internal-definition-context-introduce intdef-ctx id)
+                stx
+                intdef-ctx))]
 
     [(#%module-decl (#%pi-sig . _))
      (syntax-local-bind-syntaxes (list id) #f intdef-ctx)
@@ -194,11 +189,25 @@
     [(#%module-decl . _) #'#%dot_m]
     [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
 
+;; ----------
+;; declared module var transformer
 
 (struct declared-module-var [module-sym key->tmp-id]
   #:property prop:dot-origin
   (λ (self)
     (dot-origin (declared-module-var-module-sym self)))
+
+  ;; NOTE: resugar not called for modules *yet*
+  #:property prop:resugar-origin
+  (λ (self)
+    (resugar-origin (declared-module-var-module-sym self)
+                    (λ (stx)
+                      (syntax-parse stx
+                        #:literal-sets [u-type-literals]
+                        [{~#%type:app* (#%type:con dot:#%dot_τ) um-path (#%type:con sym)}
+                         #:with m-expr (u-mod-path->path #'um-path)
+                         #'(dot m-expr sym)]))))
+
   #:property prop:dot-accessible/type
   (λ (self)
     (define m-sym (declared-module-var-module-sym self))
@@ -219,6 +228,25 @@
        (define id (hash-ref hsh key #f))
        ;; TODO: make this cooperate somehow with reintroduce-dots
        id))))
+
+;; ----------
+;; declared type transformer
+
+(struct declared-type-transformer [sym transformer]
+  #:property prop:procedure (struct-field-index transformer)
+  #:property prop:resugar-origin
+  (λ (self)
+    (match-define (declared-type-transformer stxprop _) self)
+    (resugar-origin stxprop
+                    u-type-app->type)))
+
+;; [Listof Id] TypeStx -> [Stx -> Stx]
+(define (make-declared-type-transformer args template)
+  (define sym (gensym))
+  (define template* (syntax-property template sym #t))
+  (declared-type-transformer
+   sym
+   (make-alias-transformer args template* #f)))
 
 ;; -----------------
 
