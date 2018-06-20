@@ -233,6 +233,7 @@
 ;; declared type transformer
 
 (struct declared-type-transformer [sym transformer]
+  #:methods gen:non-currying-type-transformer []
   #:property prop:procedure (struct-field-index transformer)
   #:property prop:resugar-origin
   (λ (self)
