@@ -171,14 +171,10 @@
      (syntax-local-bind-syntaxes
       (list id)
       #`(declared-module-var
-         '#,(gensym (syntax-e id))
          (hash key/tmp-id ... ...))
       intdef-ctx)
 
-     (λ (stx)
-       (define id- (internal-definition-context-introduce intdef-ctx id))
-       (define stx- (reintro stx))
-       (reintroduce-#%dot id- path-to-id stx- intdef-ctx))]))
+     reintro]))
 
 
 ;; PartialDecl -> Identifier
@@ -192,41 +188,21 @@
 ;; ----------
 ;; declared module var transformer
 
-(struct declared-module-var [module-sym key->tmp-id]
-  #:property prop:dot-origin
-  (λ (self)
-    (dot-origin (declared-module-var-module-sym self)))
-
-  ;; NOTE: resugar not called for modules *yet*
-  #:property prop:resugar-origin
-  (λ (self)
-    (resugar-origin (declared-module-var-module-sym self)
-                    (λ (stx)
-                      (syntax-parse stx
-                        #:literal-sets [u-type-literals]
-                        [{~#%type:app* (#%type:con dot:#%dot_τ) um-path (#%type:con sym)}
-                         #:with m-expr (u-mod-path->path #'um-path)
-                         #'(dot m-expr sym)]))))
-
+(struct declared-module-var [key->tmp-id]
   #:property prop:dot-accessible/type
   (λ (self)
-    (define m-sym (declared-module-var-module-sym self))
     (define hsh (declared-module-var-key->tmp-id self))
     (dot-accessible/type
      (λ (key)
        (define id (hash-ref hsh key #f))
-       (and id
-            (attach-reintroducible-dot-type
-             id
-             (reintroducible-dot-type m-sym (namespaced-symbol key)))))))
+       id)))
+
   #:property prop:dot-accessible/module
   (λ (self)
-    (define m-sym (declared-module-var-module-sym self))
     (define hsh (declared-module-var-key->tmp-id self))
     (dot-accessible/module
      (λ (key)
        (define id (hash-ref hsh key #f))
-       ;; TODO: make this cooperate somehow with reintroduce-dots
        id))))
 
 ;; ----------
