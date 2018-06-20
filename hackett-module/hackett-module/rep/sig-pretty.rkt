@@ -11,7 +11,7 @@
  syntax/parse/experimental/template
  syntax/id-table
  (only-in syntax/parse [attribute @])
- (only-in hackett/private/typecheck type->string type-literals ?#%type:app*)
+ (only-in hackett/private/typecheck type->string type-literals ?#%type:app* #%type:con)
  "../util/stx.rkt"
  "../util/stx-traverse.rkt"
  "../util/stx-subst.rkt"
@@ -106,3 +106,16 @@
                    (syntax->datum (traverse #'m))
                    #'x)]
        [_ (traverse-stx/recur t traverse)]))))
+
+(define (show-apps t)
+  (syntax-parse t
+    #:literal-sets [type-literals]
+    #:literals [#%apply-type]
+    [(app:#%type:app a b)
+     #:with a* (show-apps #'a)
+     #:with b* (show-apps #'b)
+     (template (?#%type:app* (#%type:con app) a* b*))]
+    [(app:#%apply-type a ...)
+     #:with [a* ...] (map show-apps (attribute a))
+     (template (?#%type:app* (#%type:con app) a* ...))]
+    [_ (traverse-stx/recur t show-apps)]))
