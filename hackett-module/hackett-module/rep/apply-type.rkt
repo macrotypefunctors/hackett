@@ -1,9 +1,11 @@
 #lang racket/base
 
 (provide #%apply-type
-         (for-syntax u-type-literals
+         (for-syntax non-currying-type-transformer?
+                     gen:non-currying-type-transformer
                      ?#%apply-type
                      ~#%apply-type
+                     u-type-literals
                      path->u-type-path u-type-path->path
                      path->u-mod-path u-mod-path->path
                      u-type-app->type))
@@ -20,6 +22,7 @@
  (only-in (unmangle-in #:only hackett/base) #%app)
  (for-syntax racket/base
              racket/pretty
+             racket/generic
              (only-in syntax/parse [attribute @])
              syntax/parse/experimental/template
              syntax/parse/class/local-value
@@ -34,9 +37,12 @@
 
 (begin-for-syntax
 
+  (define-generics non-currying-type-transformer
+    #:defaults ([alias-transformer?]))
+
   (define-syntax-class applicable-type
     #:attributes [apply]
-    [pattern {~var head (local-value procedure?)}
+    [pattern {~var head (local-value non-currying-type-transformer?)}
       #:attr apply
       (λ (args)
         (local-apply-transformer (@ head.local-value)
