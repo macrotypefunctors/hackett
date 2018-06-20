@@ -36,7 +36,7 @@
 
   (define-syntax-class applicable-type
     #:attributes [apply]
-    [pattern {~var head (local-value alias-transformer?)}
+    [pattern {~var head (local-value procedure?)}
       #:attr apply
       (λ (args)
         (local-apply-transformer (@ head.local-value)
