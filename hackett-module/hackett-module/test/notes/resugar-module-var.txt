@@ -21,3 +21,20 @@ be represented as (#%type:con data:M.D123). Is there a generic mechanism
 for doing both opaque types as ((#%type:con #%apply-type) ...) and
 data types as (#%type:con data:M.D123) ?
 
+
+Both
+    (opaque:M.T123 A) or (alias:M.T123 A), same thing
+    =>
+    ((con #%apply-type) ((con #%dot_\tau) M (con T)) A)
+    =>
+    (#%apply-type (#%dot_\tau M T) A)
+and
+    (data:M.D123 A)
+    =>
+    ((con data:M.D123) A)
+    =>
+    (#%apply-type (#%dot_\tau M D) A)
+?
+
+The representation in signatures after expansion should be consistent (meaning: probably (#%apply-type (#%dot_\tau M D) A)) so that sealing works from data -> opaque, and so that "where"-ing works from opaque -> alias.
+
