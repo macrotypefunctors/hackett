@@ -23,15 +23,15 @@ data types as (#%type:con data:M.D123) ?
 
 
 Both
-    (opaque:M.T123 A) or (alias:M.T123 A), same thing
+    (opaque:M.T123 A)              ; the `opaque:M.T123` id is a declared-type-transformer struct
     =>
-    ((con #%apply-type) ((con #%dot_\tau) M (con T)) A)
+    ((con #%apply-type) ((con #%dot_\tau) M (con T)) A) + prop
     =>
     (#%apply-type (#%dot_\tau M T) A)
 and
-    (data:M.D123 A)
+    (data:M.D456 A)                ; the `data:M.D456` id is a declared-type-transformer struct
     =>
-    ((con data:M.D123) A)
+    ((con data:M.D789) A) + prop   ; the `data:M.D789` id is a data-type-constructor struct
     =>
     (#%apply-type (#%dot_\tau M D) A)
 ?
