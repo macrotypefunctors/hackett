@@ -116,6 +116,7 @@
   ;; Decl -> Bool
   (define (decl-type? d)
     (syntax-parse d
+      #:literal-sets [sig-literals]
       [(#%type-decl _) #t]
       [_ #f]))
 
