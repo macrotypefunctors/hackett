@@ -138,12 +138,127 @@
     [(#%pi-sig . _) signature]))
 
 
+;; generate-decl-bindings :
+;; Key Id Decl
+;; #:parent-link-id Id
+;; #:ctx IntdefCtx
+;; ->
+;; [List [Listof [List Id TransformerStx]]
+;;       [Listof [List Id Stx]]]
+
+;; Returns binding syntax for the given decl.
+;; If `decl` is value/ctor decl, then `type-expand-ctx` must
+;; have all of the necessary type bindings declared in it.
+(define (generate-decl-bindings key id decl
+                                #:parent-unique-symbol parent-sym*
+                                #:parent-link-id parent-link-id*
+                                #:ctx type-expansion-ctx)
+  (define/syntax-parse key-sym
+    (namespaced-symbol key))
+  (define/syntax-parse parent-link-id
+    parent-link-id*)
+  (define/syntax-parse parent-sym
+    parent-sym*)
+
+  (define (expand-type/rem-ctx t)
+    (internal-definition-context-introduce
+     type-expansion-ctx
+     (expand-type t type-expansion-ctx)
+     'remove))
+
+  (syntax-parse decl
+    #:literal-sets [sig-literals]
+
+    ;; ------
+    ;; module decls
+
+    [(#%module-decl signature)
+     (define link-internal-id
+       (generate-temporary id))
+     (define link-expr
+       #`(l:mod-submod-ref parent-link-id 'key-sym))
+
+     (match-define `{,submod-stx-bindings ,submod-val-bindings}
+       (generate-module-var-bindings id
+                                     link-internal-id
+                                     #'signature))
+
+     `{,submod-stx-bindings
+       ([,link-internal-id ,link-expr] ,@submod-val-bindings)}]
+
+    ;; ------
+    ;; type decls
+
+    [(#%type-decl (#%alias [x ...] t))
+     (define rhs
+       #'(make-alias-transformer
+          (list (quote-syntax x) ...)
+          (quote-syntax t)
+          #f))
+     `{([,id ,rhs]) ()}]
+
+    [(#%type-decl (#%opaque [x ...]))
+     (define rhs
+       #'(opaque-type-constructor
+          'parent-sym
+          'key-sym))
+     `{([,id ,rhs]) ()}]
+
+    [(#%type-decl (#%data [x ...] c-id ...))
+     #:with type-var-arity (length (@ x))
+     (define rhs
+       #`(data-type-constructor/reintroducible
+          (quote-syntax (#%type:con #,id))        ; type
+          'type-var-arity                         ; arity
+          (list (quote-syntax c-id) ...)          ; constructor ids
+          #f                                      ; fixity
+          'parent-sym                             ; module sym
+          'key-sym))                              ; external key
+     `{([,id ,rhs]) ()}]
+
+    ;; ------
+    ;; constructor decls
+
+    [(#%constructor-decl t)
+     #:with t* (expand-type/rem-ctx #'t)
+     #:with link-val-id (generate-temporary id)
+     #:with link-pat-id (generate-temporary id)
+     (define link-val-expr #'(l:mod-value-ref parent-link-id 'key-sym))
+     (define link-pat-expr #'(l:mod-pattern-ref parent-link-id 'key-sym))
+
+     (define rhs
+       #`(data-constructor
+          (make-typed-var-transformer (quote-syntax link-val-id)
+                                      (quote-syntax t*))
+          (quote-syntax t*)
+          (λ (sub-pats) #`(l:app/pat-info link-pat-id #,sub-pats))
+          #f))
+
+     `{([,id ,rhs])
+       ([,#'link-val-id ,link-val-expr]
+        [,#'link-pat-id ,link-pat-expr])}]
+
+    ;; ------
+    ;; value decls
+
+    [(#%val-decl t)
+     #:with t* (expand-type/rem-ctx #'t)
+     #:with link-val-id (generate-temporary id)
+     (define link-val-expr #'(l:mod-value-ref parent-link-id 'key-sym))
+
+     (define rhs
+       #'(make-typed-var-transformer (quote-syntax link-val-id)
+                                     (quote-syntax t*)))
+
+     `{([,id ,rhs])
+       ([,#'link-val-id ,link-val-expr])}]))
+
 ;; Generates bindings needed to introduce a module with the
 ;; given name and signature.
 ;; Id Id Signature ->
 ;;   [List [Listof [List Id TransformerStx]]     ; transformer bindings
 ;;         [Listof [List Id Stx]]]               ; value binding
-(define (generate-module-var-bindings name internal-id s)
+(define (generate-module-var-bindings name link-id s)
 
   (define/syntax-parse unique-symbol (gensym (syntax-e name)))
 
@@ -163,10 +278,12 @@
            decl-module?)
      s-decls))
 
+  ;; -------------
+  ;; generate new ids for each decl
+
   (define submod-ids
     (generate-prefixed-temporaries (format-symbol "module:~a." name)
                                    submod-keys))
-  (define submod-val-ids (generate-temporaries submod-keys))
 
   (define opaque-type-ids
     (generate-prefixed-temporaries (format-symbol "opaque:~a." name)
@@ -183,19 +300,29 @@
     (generate-prefixed-temporaries (format-symbol "ctor:~a." name)
                                    constructor-keys))
 
-  (define constructor-val-ids (generate-temporaries constructor-keys))
-  (define constructor-pat-ids (generate-temporaries constructor-keys))
-
-  (define constructor-key->id
-    (hash-zip constructor-keys constructor-ids))
-
   (define typed-value-ids
     (generate-prefixed-temporaries (format-symbol "typed:~a." name)
                                    value-keys))
-  (define untyped-value-ids
-    (generate-prefixed-temporaries (format-symbol "untyped:~a." name)
-                                   value-keys))
 
+  ;; -----
+  ;; make mappings to the new ids
+
+  (define key->introduced
+    (for*/hash
+        ([hsh (in-list (list (hash-zip submod-keys submod-ids)
+                             (hash-zip opaque-type-keys opaque-type-ids)
+                             (hash-zip data-type-keys data-type-ids)
+                             (hash-zip alias-type-keys alias-type-ids)
+                             (hash-zip constructor-keys constructor-ids)
+                             (hash-zip value-keys typed-value-ids)))]
+         [(key introduced) (in-hash hsh)])
+      (values key introduced)))
+
+  (define internal->introduced
+    (for/free-id-table ([(key introduced) (in-hash key->introduced)])
+      (values (hash-ref s-internal-ids key) introduced)))
+
+  ;; ------
   ;; make intdef context for expanding types
 
   (define type-expansion-ctx
@@ -206,198 +333,76 @@
      (hash-zip opaque-type-keys opaque-type-ids)
      (hash-zip data-type-keys data-type-ids)))
 
-  (define (expand-type/rem-ctx t)
-    (internal-definition-context-introduce
-     type-expansion-ctx
-     (expand-type t type-expansion-ctx)
-     'remove))
-
   (define (tec-bind-syntax-bindings bs)
     (syntax-local-bind-syntaxes
      (map first bs)
      #`(values #,@(map second bs))
      type-expansion-ctx))
 
-  (define internal->introduced
-    (for*/free-id-table
-        ([hsh (in-list (list (hash-zip submod-keys submod-ids)
-                             (hash-zip alias-type-keys alias-type-ids)
-                             (hash-zip opaque-type-keys opaque-type-ids)
-                             (hash-zip data-type-keys data-type-ids)))]
-         [(key introduced) (in-hash hsh)])
-      (values (hash-ref s-internal-ids key) introduced)))
+  (define (generate-only-decls predicate)
+    (define-values [stx-bss val-bss]
+      (for*/lists (stx-bss val-bss)
+                  ([(key new-id) (in-hash key->introduced)]
+                   [decl (in-value (hash-ref s-decls key))]
+                   #:when (predicate decl))
+        (define decl* (stx-substs decl internal->introduced))
+        (match-define `{,trs ,exprs}
+          (generate-decl-bindings key new-id decl*
+                                  #:parent-unique-symbol (syntax-e #'unique-symbol)
+                                  #:parent-link-id link-id
+                                  #:ctx type-expansion-ctx))
+        (values trs exprs)))
+    (list (append* stx-bss) (append* val-bss)))
 
-  ;; generate bindings for submodules
+  ;; ----------
+  ;; generate non-value decls (types and modules)
 
-  (define submod-internal-id-bindings/val
-    (for/list ([key (in-list submod-keys)]
-               [id (in-list submod-val-ids)])
-      (list id #`(l:mod-submod-ref #,internal-id '#,(namespaced-symbol key)))))
+  (match-define `{,type/mod-stx-bindings ,type/mod-val-bindings}
+    (generate-only-decls
+     (λ (d) (or (decl-type? d)
+                (decl-module? d)))))
 
-  ;; generate the bindings for submodules using a recursive
-  ;; call to generate-module-var-bindings
-  (match-define (list (list submod-bindingss/stx submod-bindingss/val) ...)
-    (for/list ([key (in-list submod-keys)]
-               [id (in-list submod-ids)]
-               [internal-id (in-list submod-val-ids)])
-      (define/syntax-parse ({~literal #%module-decl} sub-s)
-        (hash-ref s-decls key))
-      (define sub-s*
-        (stx-substs #'sub-s internal->introduced))
-      (generate-module-var-bindings id internal-id sub-s*)))
+  ;; ------------------
+  ;; generate value decls (val-decl, constructor-decl)
 
-  (define submod-bindings/stx (append* submod-bindingss/stx))
-  (define submod-bindings/val
-    (append* submod-internal-id-bindings/val submod-bindingss/val))
+  ;; bind types/mods first
+  (tec-bind-syntax-bindings type/mod-stx-bindings)
+
+  (match-define `{,val/ctor-stx-bindings ,val/ctor-val-bindings}
+    (generate-only-decls
+     (λ (d) (or (decl-val? d)
+                (decl-constructor? d)))))
+
+  ;; generate module-var-transformer binding for module name
 
   (define/syntax-parse [submod-key ...] submod-keys)
   (define/syntax-parse [submod-id ...] submod-ids)
-  (define/syntax-parse [[submod-key/id ...] ...]
-    #'[['submod-key (quote-syntax submod-id)] ...])
-
-  ;; generate aliases for alias types
-
-  ;; TODO: generate the correct bindings for aliases with type parameters
-  ;;       (possibly using make-alias-transformer)
-  (define alias-type-bindings
-    (for/list ([key (in-list alias-type-keys)]
-               [id (in-list alias-type-ids)])
-      (define/syntax-parse ({~literal #%type-decl} ({~literal #%alias} [x ...] t))
-        (hash-ref s-decls key))
-      (define/syntax-parse t*
-        (stx-substs #'t internal->introduced))
-      (list id
-            #'(make-alias-transformer (list (quote-syntax x) ...)
-                                      (quote-syntax t*)
-                                      #f))))
+  (define/syntax-parse [[submod-key/id ...] ...] #'[['submod-key (quote-syntax submod-id)] ...])
 
   (define/syntax-parse [alias-key ...] alias-type-keys)
   (define/syntax-parse [alias-id ...] alias-type-ids)
   (define/syntax-parse [[alias-key/id ...] ...] #'[['alias-key (quote-syntax alias-id)] ...])
 
-  ;; generate #%type:con's for opaque types
-
-  (define opaque-type-bindings
-    (for/list ([key (in-list opaque-type-keys)]
-               [id (in-list opaque-type-ids)])
-      (list id
-            #`(opaque-type-constructor
-               'unique-symbol
-               '#,(namespaced-symbol key)))))
-
   (define/syntax-parse [op-key ...] opaque-type-keys)
   (define/syntax-parse [op-id ...] opaque-type-ids)
   (define/syntax-parse [[op-key/id ...] ...] #'[['op-key (quote-syntax op-id)] ...])
-
-  ;; generate #%type:con's for data types
-
-  ;; TODO: generate the correct bindings for datatypes with type parameters
-  (define data-type-bindings
-    (for/list ([key (in-list data-type-keys)]
-               [id (in-list data-type-ids)])
-      ;; get the constructors
-      (define/syntax-parse
-        ({~literal #%type-decl} ({~literal #%data} [x ...] c ...))
-        (hash-ref s-decls key))
-
-      ;; find the "new" constructor ids for the module being introduced
-      (define/syntax-parse
-        [c-binding-id ...]
-        (for/list ([c-id (in-list (@ c))])
-          (or (for/first ([(key id) (in-hash s-internal-ids)]
-                          #:when (free-identifier=? c-id id))
-                (hash-ref constructor-key->id key))
-              (raise-syntax-error c-id
-                "constructor declaration not found in signature"))))
-
-      ;; get the type-var arity
-      (define type-var-arity (length (@ x)))
-
-      (list id
-            #`(data-type-constructor/reintroducible
-               (quote-syntax (#%type:con #,id))        ; type
-               '#,type-var-arity                       ; arity
-               (list (quote-syntax c-binding-id) ...)  ; constructor ids
-               #f                                      ; fixity
-               'unique-symbol                          ; module sym
-               '#,(namespaced-symbol key)              ; external key
-               ))))
 
   (define/syntax-parse [data-key ...] data-type-keys)
   (define/syntax-parse [data-id ...] data-type-ids)
   (define/syntax-parse [[data-key/id ...] ...] #'[['data-key (quote-syntax data-id)] ...])
 
-  (tec-bind-syntax-bindings
-   (append submod-bindings/stx
-           alias-type-bindings opaque-type-bindings data-type-bindings))
-
-  ;; generate data-constructor bindings for data types
-
-  (define constructor-val-bindings
-    (for/list ([key (in-list constructor-keys)]
-               [id (in-list constructor-val-ids)])
-      (list id #`(l:mod-value-ref #,internal-id '#,(namespaced-symbol key)))))
-
-  (define constructor-pat-bindings
-    (for/list ([key (in-list constructor-keys)]
-               [id (in-list constructor-pat-ids)])
-      (list id #`(l:mod-pattern-ref #,internal-id '#,(namespaced-symbol key)))))
-
-  (define constructor-bindings
-    (for/list ([key (in-list constructor-keys)]
-               [id (in-list constructor-ids)]
-               [pat-id (in-list constructor-pat-ids)]
-               [val-id (in-list constructor-val-ids)])
-      (define/syntax-parse [pat-id* val-id*]
-        (list pat-id val-id))
-      (define/syntax-parse
-        ({~literal #%constructor-decl} t)
-        (hash-ref s-decls key))
-      (define/syntax-parse t*
-        (expand-type/rem-ctx #'t))
-
-      (list id
-            #'(data-constructor
-               (make-typed-var-transformer (quote-syntax val-id*)
-                                           (quote-syntax t*))
-               (quote-syntax t*)
-               (λ (sub-pats) #`(l:app/pat-info pat-id* #,sub-pats))
-               #f))))
-
   (define/syntax-parse [ctor-key ...] constructor-keys)
   (define/syntax-parse [ctor-id ...] constructor-ids)
   (define/syntax-parse [[ctor-key/id ...] ...] #'[['ctor-key (quote-syntax ctor-id)] ...])
-
-  ;; generate mod-value-ref expressions for values
-
-  (define typed-value-bindings
-    (for/list ([key (in-list value-keys)]
-               [id (in-list typed-value-ids)]
-               [un (in-list untyped-value-ids)])
-      (define/syntax-parse ({~literal #%val-decl} t)
-        (hash-ref s-decls key))
-      (define/syntax-parse t*
-        (expand-type/rem-ctx #'t))
-
-      (list id
-            #`(make-typed-var-transformer (quote-syntax #,un)
-                                          (quote-syntax t*)))))
-
-  (define untyped-value-bindings
-    (for/list ([key (in-list value-keys)]
-               [id (in-list untyped-value-ids)])
-      (list id #`(l:mod-value-ref #,internal-id '#,(namespaced-symbol key)))))
 
   (define/syntax-parse [val-key ...] value-keys)
   (define/syntax-parse [val-id ...] typed-value-ids)
   (define/syntax-parse [[val-key/id ...] ...] #'[['val-key (quote-syntax val-id)] ...])
 
-  ;; generate module-var-transformer binding for module name
-
   (define module-binding
     (list name
           #`(module-var-transformer
-             (quote-syntax #,internal-id)
+             (quote-syntax #,link-id)
              'unique-symbol
              (quote-syntax #,s)
              ; values
@@ -411,23 +416,17 @@
 
   ;; ------
 
-  (define all-syntax-bindings
+  (define all-stx-bindings
     (cons module-binding
-          (append submod-bindings/stx
-                  alias-type-bindings
-                  opaque-type-bindings
-                  data-type-bindings
-                  constructor-bindings
-                  typed-value-bindings)))
+          (append type/mod-stx-bindings
+                  val/ctor-stx-bindings)))
 
-  (define all-value-bindings
-    (append submod-bindings/val
-            constructor-val-bindings
-            constructor-pat-bindings
-            untyped-value-bindings))
+  (define all-val-bindings
+    (append type/mod-val-bindings
+            val/ctor-val-bindings))
 
-  (list all-syntax-bindings
-        all-value-bindings))
+  (list all-stx-bindings
+        all-val-bindings))
 
 ;; Id Id Signature IntDefCtx -> [Listof [List Id Expr-Stx]]
 ;; adds bindings introduced by the module to the given intdef-ctx. returns
