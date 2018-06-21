@@ -12,3 +12,12 @@ them and the result will be the correct representation.
 it may be nice if they shared a gensym property, so that λm and mod
 can more easily call resugar without having to know of every type that
 needs resugaring.
+
+---
+
+That's fine for opaque types, but data types might require something
+else. They need to interact with pattern matching, so they do have to
+be represented as (#%type:con data:M.D123). Is there a generic mechanism
+for doing both opaque types as ((#%type:con #%apply-type) ...) and
+data types as (#%type:con data:M.D123) ?
+
