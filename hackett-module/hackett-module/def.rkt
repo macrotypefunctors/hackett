@@ -15,6 +15,7 @@
              hackett/private/util/stx
              "rep/sig.rkt"
              "rep/sig-pretty.rkt"
+             "rep/resugar.rkt"
              "check/expand-check.rkt"
              "check/module-var.rkt"
              "namespace/namespace.rkt"))
@@ -94,7 +95,7 @@
 
    #:with x-- (intro #'x-)
    #:with [body- B] (sig⇒ #'body ctx)
-   #:with B* (reintroduce-#%dot (intro #'x) #'x-- #'B ctx)
+   #:with B* (resugar (intro #'x) #'x-- #'B ctx)
    #:with [[val-id val-expr] ...] val-ids/exprs
    (internal-definition-context-track
     ctx

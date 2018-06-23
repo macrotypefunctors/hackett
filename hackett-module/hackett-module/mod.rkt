@@ -2,7 +2,6 @@
 (require
  "rep/sig-literals.rkt"
  "namespace/reqprov.rkt"
- (only-in "dot/dot-t.rkt" reintroduce-#%dot)
  racket/pretty
  syntax/parse/define
  (except-in hackett/private/type-language
@@ -26,6 +25,7 @@
              syntax/kerncase
              syntax/id-set
              "rep/sig.rkt"
+             "rep/resugar.rkt"
              "check/expand-check.rkt"
              "namespace/namespace.rkt"))
 
@@ -208,10 +208,10 @@
      (define mod-internal-id
        (hash-ref (sig-internal-ids stx)
                  (namespaced:module (syntax-e mod-id))))
-     (reintroduce-#%dot mod-id
-                        mod-internal-id
-                        stx
-                        #f))
+     (resugar mod-id
+              mod-internal-id
+              stx
+              #f))
 
    #:with final-expression #'(let-values ([() s.residual])
                                (l:mod (hash val-sym/id ... ...)

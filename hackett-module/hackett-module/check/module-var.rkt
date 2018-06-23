@@ -8,10 +8,13 @@
  racket/match
  racket/syntax
  syntax/parse
+ syntax/parse/experimental/template
  (only-in syntax/parse [attribute @])
  syntax/parse/class/local-value
  hackett/private/util/stx
  "expand-check-prop.rkt"
+ "../rep/resugar.rkt"
+ "../rep/sig.rkt"
  "../prop-reintroducible-dot-type.rkt"
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
@@ -59,7 +62,7 @@
     ((make-variable-like-transformer
       (λ (id)
         (attach-sig (replace-stx-loc x- id)
-                    (strengthen-signature id sig))))
+                    (expand-sig (strengthen-signature id sig)))))
      stx))
   #:property prop:dot-accessible
   (λ (self)
@@ -69,15 +72,24 @@
      (λ (val-key) (hash-ref hv val-key #f))
      (λ (pat-key) (hash-ref hp pat-key #f))
      (λ (type-key) (hash-ref ht type-key #f))
-     (λ (mod-key) (hash-ref hm mod-key #f)))))
+     (λ (mod-key) (hash-ref hm mod-key #f))))
+  #:property prop:resugar-origin
+  (λ (self)
+    (match-define (module-var-transformer internal-id sym _ _ _ _ _) self)
+    (define (how-to-resugar path stx ctx)
+      (syntax-parse stx
+        #:literal-sets [u-type-literals]
+        [(~#%type:app* (#%type:con
+                        {~var inner-id (reintroducible-dot-type-id ctx)})
+                       arg
+                       ...)
+         #`(#%apply-type (#%dot_τ #,path inner-id.external-sym)
+                         arg
+                         ...)]))
+    (resugar-origin sym how-to-resugar)))
 
 (struct opaque-type-constructor
   [module-sym external-sym]
-  #:property prop:procedure
-  (λ (self stx)
-    ((make-variable-like-transformer
-      (λ (id) #`(#%type:con #,id)))
-     stx))
   #:property prop:reintroducible-dot-type
   (λ (self)
     (reintroducible-dot-type
@@ -93,38 +105,45 @@
      (data-type-constructor/reintroducible-module-sym self)
      (data-type-constructor/reintroducible-external-sym self))))
 
+(define (make-resugarable-alias-transformer prop args inner-id*)
+  (define/syntax-parse inner-id inner-id*)
+  (define/syntax-parse [arg ...] args)
+  (define t
+    (syntax-property
+     (template (?#%type:app* (#%type:con inner-id) arg ...))
+     prop
+     #true))
+  (make-alias-transformer args t #f))
 
-;; Id Signature -> Signature
+;; PathStx Signature -> Signature
 ;; Strengthen the signature, recursively replacing opaque types with
 ;; self references to preserve the identity of the original module.
 ;; `self-path` should be bound with the given signature, so that
 ;; the strengthened signature is valid for aliases of the path.
-(define (strengthen-signature self-id signature)
+(define (strengthen-signature self-path* signature)
   (syntax-parse signature
     #:literal-sets [sig-literals]
     [(sig:#%sig internal-ids:hash-literal
                 decls:hash-literal)
 
-     ;#:with self-path self-path*
-     #:with self-type:dot-accessible-id/type self-id
-     #:with self-module:dot-accessible-id/module self-id
+     #:with self-path self-path*
 
      #:do [(define (strengthen-decl key d)
              (syntax-parse d
                #:literal-sets [sig-literals]
-               [(type-decl:#%type-decl (#%opaque []))
+               #;[(type-decl:#%type-decl (#%opaque []))
                 ;#:with sym (namespaced-symbol key)
                 #:with d-id ((@ self-type.key->id) key)
                 #'(type-decl (#%alias [] d-id))]
-               [(type-decl:#%type-decl (#%opaque [x:id ...+]))
-                ;#:with sym (namespaced-symbol key)
-                #:with d-id ((@ self-type.key->id) key)
-                #'(type-decl (#%alias [x ...] (#%apply-type d-id x ...)))]
+               [(type-decl:#%type-decl (#%opaque [x:id ...]))
+                #:with sym (namespaced-symbol key)
+                ; #:with d-id ((@ self-type.key->id) key)
+                #'(type-decl (#%alias [x ...] (#%apply-type (#%dot_τ self-path sym) x ...)))]
 
                [(mod-decl:#%module-decl submod-signature)
-                ; #:with sym (namespaced-symbol key)
-                #:with d-id ((@ self-module.key->id) key)
-                #:with strong-sig (strengthen-signature #'d-id #'submod-signature)
+                #:with sym (namespaced-symbol key)
+                ; #:with d-id ((@ self-module.key->id) key)
+                #:with strong-sig (strengthen-signature #'(#%dot_m self-path sym) #'submod-signature)
                 #'(mod-decl strong-sig)]
 
                [_ d]))]
@@ -174,7 +193,7 @@
 
     [(#%module-decl signature)
      (define link-internal-id
-       (generate-temporary id))
+       (generate-temporary (format-symbol "link:~a" id)))
      (define link-expr
        #`(l:mod-submod-ref parent-link-id 'key-sym))
 
@@ -198,15 +217,57 @@
      `{([,id ,rhs]) ()}]
 
     [(#%type-decl (#%opaque [x ...]))
-     (define rhs
+     #:with inner-id (generate-temporary (format-symbol "inner-opaque:~a" id))
+
+     ;; TODO:
+     ;;   generate an alias that puts the `parent-sym` property
+     ;;   on as it expands, so that `resugar` can put whatever
+     ;;   it expands to "back" as (#%apply-type ...)
+
+     ;; outer-rhs is a resugarable alias transformer that turns
+     ;; (id arg ...) into (#%type:app* (#%type:con inner-id) arg ...)
+     ;; with a property on it so that resugar can get it back
+     (define outer-rhs
+       #'(make-resugarable-alias-transformer
+          'parent-sym
+          (list (quote-syntax x) ...)
+          (quote-syntax inner-id)
+          ;; TODO: are you sure?
+          #;(attach-reintroducible-dot-type
+           (quote-syntax inner-id)
+           (opaque-type-constructor 'parent-sym 'key-sym))))
+
+     ;; inner-rhs is the value on the inner-id within (#%type:con inner-id)
+     ;; and it needs to interact with pattern matching
+     (define inner-rhs
        #'(opaque-type-constructor
           'parent-sym
           'key-sym))
-     `{([,id ,rhs]) ()}]
+     `{([,#'inner-id ,inner-rhs]
+        [,id ,outer-rhs])
+       ()}]
 
     [(#%type-decl (#%data [x ...] c-id ...))
+     #:with inner-id (generate-temporary (format-symbol "inner-data:~a" id))
+
+     ;; TODO:
+     ;;   generate an alias that puts the `parent-sym` property
+     ;;   on as it expands, so that `resugar` can put whatever
+     ;;   it expands to "back" as (#%apply-type ...)
      #:with type-var-arity (length (@ x))
-     (define rhs
+
+     ;; outer-rhs is a resugarable alias transformer that turns
+     ;; (id arg ...) into (#%type:app* (#%type:con inner-id) arg ...)
+     ;; with a property on it so that resugar can get it back
+     (define outer-rhs
+       #'(make-resugarable-alias-transformer
+          'parent-sym
+          (list (quote-syntax x) ...)
+          (quote-syntax inner-id)))
+
+     ;; inner-rhs is the value on the inner-id within (#%type:con inner-id)
+     ;; and it needs to interact with pattern matching
+     (define inner-rhs
        #`(data-type-constructor/reintroducible
           (quote-syntax (#%type:con #,id))        ; type
           'type-var-arity                         ; arity
@@ -214,15 +275,17 @@
           #f                                      ; fixity
           'parent-sym                             ; module sym
           'key-sym))                              ; external key
-     `{([,id ,rhs]) ()}]
+     `{([,#'inner-id ,inner-rhs]
+        [,id ,outer-rhs])
+       ()}]
 
     ;; ------
     ;; constructor decls
 
     [(#%constructor-decl t)
      #:with t* (expand-type/rem-ctx #'t)
-     #:with link-val-id (generate-temporary id)
-     #:with link-pat-id (generate-temporary id)
+     #:with link-val-id (generate-temporary (format-symbol "link-val:~a" id))
+     #:with link-pat-id (generate-temporary (format-symbol "link-pat:~a" id))
      (define link-val-expr #'(l:mod-value-ref parent-link-id 'key-sym))
      (define link-pat-expr #'(l:mod-pattern-ref parent-link-id 'key-sym))
 
@@ -243,7 +306,7 @@
 
     [(#%val-decl t)
      #:with t* (expand-type/rem-ctx #'t)
-     #:with link-val-id (generate-temporary id)
+     #:with link-val-id (generate-temporary (format-symbol "link:~a" id))
      (define link-val-expr #'(l:mod-value-ref parent-link-id 'key-sym))
 
      (define rhs
