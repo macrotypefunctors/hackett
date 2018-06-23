@@ -138,6 +138,7 @@
 
      (λ (stx)
        (resugar (internal-definition-context-introduce intdef-ctx id)
+                path-to-id
                 stx
                 intdef-ctx))]
 
@@ -214,8 +215,10 @@
   #:property prop:resugar-origin
   (λ (self)
     (match-define (declared-type-transformer stxprop _) self)
+    (define (how-to-resugar path stx ctx)
+      (u-type-app->type stx))
     (resugar-origin stxprop
-                    u-type-app->type)))
+                    how-to-resugar)))
 
 ;; [Listof Id] TypeStx -> [Stx -> Stx]
 (define (make-declared-type-transformer args template)
