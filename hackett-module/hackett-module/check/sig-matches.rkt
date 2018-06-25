@@ -29,7 +29,7 @@
 ;; Signature Signature -> Boolean
 ;; the signatures should be already expanded.
 (define (signature-matches? A B)
-  ;; TODO: call either sig-matches or pi-sig-matches depending
+  ;; call either sig-matches or pi-sig-matches depending
   (syntax-parse (list A B)
     #:literal-sets [sig-literals]
     [[(#%sig . _) (#%sig . _)]
@@ -95,8 +95,8 @@
             (hash-set acc k (generate-temporary k)))])
       acc))
 
-  ;; TODO: make an environment that maps the Common ids to
-  ;;       transformers that act like their components from A.
+  ;; make an environment that maps the Common ids to
+  ;; transformers that act like their components from A.
 
   (define common-ctx
     (syntax-local-make-definition-context))
@@ -145,7 +145,6 @@
           (#%type-decl (#%data [x ...] c ...))}
      (syntax-local-bind-syntaxes (list id) #f ctx)]
 
-    ;; TODO: deal with possible type parameters for aliases
     [(#%type-decl (#%alias [x ...] t))
      (define rhs #'(make-alias-transformer (list (quote-syntax x) ...)
                                            (quote-syntax t)
@@ -176,7 +175,9 @@
                         (#%data [x ...] . _)))
       (#%type-decl (#%opaque [y ...]))]
      (= (length (@ x)) (length (@ y)))]
-    ;; TODO: deal with possible type parameters for aliases
+
+    ;; deal with possible type parameters for aliases, by delegating
+    ;; to Hackett's type-matching of forall types
     [[(#%type-decl (#%alias [x ...] A)) (#%type-decl (#%alias [y ...] B))]
      (and
       (= (length (@ x)) (length (@ y)))

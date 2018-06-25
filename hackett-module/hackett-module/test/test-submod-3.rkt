@@ -32,7 +32,6 @@
         :>
         (Π ([F : FLAG])
           (sig
-            ;; TODO: (where FLAG ....)
             (module Sub : FLAG)
             ))))
 

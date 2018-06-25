@@ -203,10 +203,9 @@
     [(#%type-decl (#%opaque [x ...]))
      #:with inner-id (generate-temporary (format-symbol "inner-opaque:~a" id))
 
-     ;; TODO:
-     ;;   generate an alias that puts the `parent-sym` property
-     ;;   on as it expands, so that `resugar` can put whatever
-     ;;   it expands to "back" as (#%apply-type ...)
+     ;; generate an alias that puts the `parent-sym` property
+     ;; on as it expands, so that `resugar` can put whatever
+     ;; it expands to "back" as (#%apply-type ...)
 
      ;; outer-rhs is a resugarable alias transformer that turns
      ;; (id arg ...) into (#%type:app* (#%type:con inner-id) arg ...)
@@ -229,10 +228,9 @@
     [(#%type-decl (#%data [x ...] c-id ...))
      #:with inner-id (generate-temporary (format-symbol "inner-data:~a" id))
 
-     ;; TODO:
-     ;;   generate an alias that puts the `parent-sym` property
-     ;;   on as it expands, so that `resugar` can put whatever
-     ;;   it expands to "back" as (#%apply-type ...)
+     ;; generate an alias that puts the `parent-sym` property
+     ;; on as it expands, so that `resugar` can put whatever
+     ;; it expands to "back" as (#%apply-type ...)
      #:with type-var-arity (length (@ x))
 
      ;; outer-rhs is a resugarable alias transformer that turns
