@@ -1,6 +1,7 @@
 #lang hackett-module
 
-(require hackett/private/test)
+(require hackett-module/private/test)
+(define-binary-check ==! ([X] [(Eq X) (Show X)] X) == show)
 
 (def-signature S
   (sig
@@ -114,12 +115,15 @@
      (def n8 : Nat (NR.add1 n7))
      (def n9 : Nat (NR.add1 n8))
 
-     (def should-be-true : Bool
-       (Bool-Rep.if (N.= (N.+ n3 n5) n8)
-                         True
-                         False)))))
+     (def test
+       (do
+         {(Bool-Rep.if (N.= (N.+ n3 n5) n8)
+                       True
+                       False)
+          ==!
+          True})))))
 
 (def-module TestNat/Int
   (TestNat Nat-Rep/Int))
 
-(test {TestNat/Int.should-be-true ==! True})
+(test TestNat/Int.test)
