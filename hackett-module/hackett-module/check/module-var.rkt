@@ -15,7 +15,7 @@
  "expand-check-prop.rkt"
  "../rep/resugar.rkt"
  "../rep/sig.rkt"
- "../prop-reintroducible-dot-type.rkt"
+ "../resugar-dot-sym.rkt"
  "../prop-dot-accessible.rkt"
  "../util/stx.rkt"
  "../util/stx-subst.rkt"
@@ -79,30 +79,15 @@
       (syntax-parse stx
         #:literal-sets [u-type-literals]
         [(~#%type:app* (#%type:con
-                        {~var inner-id (reintroducible-dot-type-id ctx)})
+                        {~var inner-id resugar-dot-sym-id})
                        arg
                        ...)
-         #`(#%apply-type (#%dot_τ #,path inner-id.external-sym)
+         #`(#%apply-type (#%dot_τ #,path inner-id.sym-stx)
                          arg
                          ...)]))
     (resugar-origin sym how-to-resugar)))
 
-(struct opaque-type-constructor
-  [module-sym external-sym]
-  #:property prop:reintroducible-dot-type
-  (λ (self)
-    (reintroducible-dot-type
-     (opaque-type-constructor-module-sym self)
-     (opaque-type-constructor-external-sym self))))
-
-(struct data-type-constructor/reintroducible
-  data-type-constructor
-  [module-sym external-sym]
-  #:property prop:reintroducible-dot-type
-  (λ (self)
-    (reintroducible-dot-type
-     (data-type-constructor/reintroducible-module-sym self)
-     (data-type-constructor/reintroducible-external-sym self))))
+(struct opaque-type-constructor [])
 
 (define (make-resugarable-alias-transformer prop args inner-id*)
   (define/syntax-parse inner-id inner-id*)
@@ -230,18 +215,13 @@
        #'(make-resugarable-alias-transformer
           'parent-sym
           (list (quote-syntax x) ...)
-          (quote-syntax inner-id)
-          ;; TODO: are you sure?
-          #;(attach-reintroducible-dot-type
+          (attach-resugar-dot-sym
            (quote-syntax inner-id)
-           (opaque-type-constructor 'parent-sym 'key-sym))))
+           'key-sym)))
 
      ;; inner-rhs is the value on the inner-id within (#%type:con inner-id)
-     ;; and it needs to interact with pattern matching
      (define inner-rhs
-       #'(opaque-type-constructor
-          'parent-sym
-          'key-sym))
+       #'(opaque-type-constructor))
      `{([,#'inner-id ,inner-rhs]
         [,id ,outer-rhs])
        ()}]
@@ -262,18 +242,18 @@
        #'(make-resugarable-alias-transformer
           'parent-sym
           (list (quote-syntax x) ...)
-          (quote-syntax inner-id)))
+          (attach-resugar-dot-sym
+           (quote-syntax inner-id)
+           'key-sym)))
 
      ;; inner-rhs is the value on the inner-id within (#%type:con inner-id)
      ;; and it needs to interact with pattern matching
      (define inner-rhs
-       #`(data-type-constructor/reintroducible
+       #`(data-type-constructor
           (quote-syntax (#%type:con #,id))        ; type
           'type-var-arity                         ; arity
           (list (quote-syntax c-id) ...)          ; constructor ids
-          #f                                      ; fixity
-          'parent-sym                             ; module sym
-          'key-sym))                              ; external key
+          #f))                                    ; fixity
      `{([,#'inner-id ,inner-rhs]
         [,id ,outer-rhs])
        ()}]
