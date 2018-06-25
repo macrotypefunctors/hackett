@@ -26,7 +26,6 @@
          "../util/stx-subst.rkt"
          "../util/hash.rkt"
          "../prop-dot-accessible.rkt"
-         "../prop-reintroducible-dot-type.rkt"
          "../namespace/reqprov.rkt"
          "../rep/resugar.rkt"
          (for-syntax racket/base)
