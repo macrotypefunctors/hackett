@@ -8,6 +8,7 @@
              "app.rkt"
              "def.rkt"
              "mod.rkt"
+             "seal.rkt"
              "sig.rkt"
              "dot.rkt"
              "where.rkt"
@@ -20,6 +21,7 @@
  (all-from-out hackett/prelude)
  (all-from-out "app.rkt")
  (all-from-out "mod.rkt")
+ (all-from-out "seal.rkt")
  (except-out (all-from-out "sig.rkt") #%internal-decl)
  (all-from-out "def.rkt")
  (all-from-out "dot.rkt")

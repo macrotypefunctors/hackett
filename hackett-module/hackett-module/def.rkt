@@ -22,10 +22,7 @@
 
 (provide
  def-module
- (module-out seal
-             (rename-out
-              [λₘ λ]
-              [appₘ #%app])))
+ (module-out (rename-out [λₘ λ])))
 
 (define-syntax-parser def-module
   [(_ {~module name:id} {~module m:expr})
@@ -47,14 +44,6 @@
        ...
        (printf "module body: ")
        (pretty-write name))])
-
-(define-syntax-parser seal
-  #:datum-literals [:>]
-  [(_ m:expr :> {~signature s:sig})
-   #:with m- (sig⇐ #'m #'s.expansion)
-   (attach-sig #'(let-values ([() s.residual])
-                   m-)
-               #'s.expansion)])
 
 (define-syntax-parser λₘ
   #:datum-literals [:]
@@ -105,11 +94,3 @@
                     body-)
                 #'(#%pi-sig ([x-- A.expansion]) B*)))])
 
-(define-syntax-parser appₘ
-  #:literals [#%pi-sig]
-  [(_ fun:expr arg:id)
-   ;; TODO: allow module paths for `a`, or module expressions if possible
-   #:with [fun- (#%pi-sig ([x A]) B)] (sig⇒ #'fun)
-   #:with arg- (sig⇐ #'arg #'A)
-   #:with B*:sig (signature-subst #'B #'x #'arg)
-   (attach-sig #'(#%app fun- arg-) #'B*.expansion)])
