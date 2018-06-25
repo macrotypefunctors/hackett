@@ -1,8 +1,6 @@
 #lang racket/base
 
 (provide
- prop:dot-origin             dot-origin             dot-origin?
- dot-origin-module-sym
  prop:dot-accessible/value   dot-accessible/value   dot-accessible/value?
  prop:dot-accessible/pattern dot-accessible/pattern dot-accessible/pattern?
  prop:dot-accessible/type    dot-accessible/type    dot-accessible/type?
@@ -18,12 +16,6 @@
 (require struct-like-struct-type-property
          syntax/parse
          syntax/parse/class/local-value)
-
-;; module-sym : Symbol
-;; this is the symbol that `reintroduce-#%dot` uses to compare
-
-(define-struct-like-struct-type-property dot-origin
-  [module-sym])
 
 ;; key->id : Key -> [Maybe Id]
 ;; such that the id will expand to someting that has/is the
@@ -42,13 +34,10 @@
   [key->id])
 
 (define-struct-like-struct-type-property dot-accessible
-  [module-sym
-   value-key->id
+  [value-key->id
    pattern-key->id
    type-key->id
    module-key->id]
-  #:property prop:dot-origin
-  (λ (self) (dot-origin (dot-accessible-module-sym self)))
   #:property prop:dot-accessible/value
   (λ (self) (dot-accessible/value (dot-accessible-value-key->id self)))
   #:property prop:dot-accessible/pattern
