@@ -22,6 +22,13 @@
    (val add1 : {Nat -> Nat})
    (val ?sub1 : {Nat -> (Maybe Nat)})))
 
+(def-signature LIST-REP
+  (sig
+   (type (List a))
+   (val empty : (∀ [a] (List a)))
+   (val cons : (∀ [a] {a -> (List a) -> (List a)}))
+   (val destruct : (∀ [a] {(List a) -> (Maybe (Tuple a (List a)))}))))
+
 (define-simple-macro (def-range n start:nat end:nat start-exp inc)
   #:do [(define ids
           (for/list ([i (in-range (syntax-e #'start) (syntax-e #'end))])
@@ -50,6 +57,21 @@
    (val = : {Nat -> Nat -> Bool})
    (val + : {Nat -> Nat -> Nat})
    (val ?- : {Nat -> Nat -> (Maybe Nat)})))
+
+(def-signature LIST
+  (sig
+   (include-sig LIST-REP)
+   (type Bool)
+   (val show/e : (∀ [a] {{a -> String} -> {(List a) -> String}}))
+   (val eq/e : (∀ [a] {{a -> a -> Bool} -> {(List a) -> (List a) -> Bool}}))
+   (val empty? : (∀ [a] {(List a) -> Bool}))
+   (val cons? : (∀ [a] {(List a) -> Bool}))
+   (val ?first : (∀ [a] {(List a) -> (Maybe a)}))
+   (val ?rest : (∀ [a] {(List a) -> (Maybe (List a))}))
+   (val first! : (∀ [a] {(List a) -> a}))
+   (val rest! : (∀ [a] {(List a) -> (List a)}))
+   (val app : (∀ [a] {(List a) -> (List a) -> (List a)}))
+   (val rev : (∀ [a] {(List a) -> (List a)}))))
 
 ;; ---------------------------------------------------------
 
@@ -104,6 +126,66 @@
              [[(Just am1) (Just bm1)] (?- am1 bm1)])]))
        :>
        (where (where NAT Nat = N.Nat) Bool = B.Bool)))))
+
+(def-module Extend-List
+  (λ ([L : LIST-REP])
+    (λ ([B : BOOL-REP])
+      (seal
+       (mod
+        (type (List a) (L.List a))
+        (type Bool B.Bool)
+        (def empty L.empty)
+        (def cons L.cons)
+        (def destruct L.destruct)
+        ;; ---
+        (defn show/e
+          [[se l]
+           (case (destruct l)
+             [Nothing "empty"]
+             [(Just (Tuple fst rst))
+              {"(cons " ++ (se fst) ++ " " ++ (show/e se rst) ++ ")"}])])
+        (defn eq/e
+          [[ee as bs]
+           (case* [(destruct as) (destruct bs)]
+             [[Nothing Nothing] B.true]
+             [[(Just (Tuple a as)) (Just (Tuple b bs))]
+              (B.if (ee a b) (eq/e ee as bs) B.false)]
+             [[_ _] B.false])])
+        ;; ---
+        (defn empty?
+          [[l] (case (destruct l) [Nothing B.true] [(Just _) B.false])])
+        (defn cons?
+          [[l] (case (destruct l) [Nothing B.false] [(Just _) B.true])])
+        (defn ?first
+          [[l] (case (destruct l)
+                 [Nothing Nothing]
+                 [(Just (Tuple a b)) (Just a)])])
+        (defn ?rest
+          [[l] (case (destruct l)
+                 [Nothing Nothing]
+                 [(Just (Tuple a b)) (Just b)])])
+        (defn first!
+          [[l] (case (?first l)
+                 [(Just r) r]
+                 [Nothing (error! "first of empty")])])
+        (defn rest!
+          [[l] (case (?rest l)
+                 [(Just r) r]
+                 [Nothing (error! "rest of empty")])])
+        ;; ---
+        (defn app
+          [[as bs]
+           (case (destruct as)
+             [Nothing             bs]
+             [(Just (Tuple a as)) (cons a (app as bs))])])
+        (defn rev
+          [[l]
+           (case (destruct l)
+             [Nothing                empty]
+             [(Just (Tuple fst rst)) (app (rev rst) (cons fst empty))])])
+        )
+       :>
+       (where LIST Bool = B.Bool)))))
 
 ;; ---------------------------------------------------------
 
