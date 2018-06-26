@@ -39,7 +39,15 @@
  (sig (data D C) (val x : D)))
 
 (check-mod-matches
+ (mod (data D C) (def x C))
+ (sig (data D C) (val x : D)))
+
+(check-mod-matches
  (mod (data D C) (defn f : {D -> Integer} [[C] 1]))
+ (sig (data D C) (val f : {D -> Integer})))
+
+(check-mod-matches
+ (mod (data D C) (defn f [[C] 1]))
  (sig (data D C) (val f : {D -> Integer})))
 
 (check-mod-matches
