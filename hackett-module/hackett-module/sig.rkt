@@ -6,6 +6,7 @@
          type
          data
          module
+         include-sig
          def-signature
          ;; ---
          #%internal-decl
@@ -30,11 +31,13 @@
                      hackett/private/util/stx
                      "rep/sig.rkt"
                      "namespace/namespace.rkt"
+                     "util/stx.rkt"
                      "util/hash.rkt"))
 
 
 (define-syntax val #f)
 (define-syntax module #f)
+(define-syntax include-sig #f)
 
 ;; (#%internal-decl #<internal-decl-struct>)
 (define-syntax #%internal-decl #f)
@@ -44,7 +47,7 @@
 (begin-for-syntax
   (define-literal-set sig-surface-literals
     #:datum-literals [: =]
-    [val type data module #%internal-decl])
+    [val type data module include-sig #%internal-decl])
 
   (define-syntax-class sig-entry
     #:attributes [[key 1] [id 1] [decl 1]]
@@ -56,6 +59,26 @@
       #:with [key ...] #`[#,key0]
       #:with [id ...] #`[#,internal-id0]
       #:with [decl ...] #`[#,decl0]]
+
+    [pattern (include-sig {~and here {~signature s:sig}})
+      #:do [(define (key->identifer stx key [src #f] [props #f])
+              (match-define (namespaced ns sym) key)
+              (define stx-id (datum->syntax stx sym src props))
+              (match ns
+                ['value (value-namespace-introduce stx-id)]
+                ['type (type-namespace-introduce stx-id)]
+                ['module (module-namespace-introduce stx-id)]
+                ['signature (signature-namespace-introduce stx-id)]))
+            (define internal->external
+              (for/free-id-table ([(k v)
+                                   (in-hash (sig-internal-ids #'s.expansion))])
+                (values v (key->identifer #'here k #'here #'here))))
+            (define s* (signature-substs #'s.expansion internal->external))
+            (define internal-ids* (sig-internal-ids s*))
+            (define decls* (sig-decls s*))]
+      #:with [[key id decl] ...]
+      (for/list ([(key id) (in-hash internal-ids*)])
+        (list key id (hash-ref decls* key)))]
 
     [pattern (val {~value x:id} : {~type val-type:expr})
       #:with [key ...]  #`[#,(namespaced:value #'x)]
