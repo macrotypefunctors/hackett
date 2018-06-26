@@ -58,5 +58,13 @@
       (val z : Nat)
       (val s : {Nat -> Nat})))
 
+(check-mod-matches
+ (mod (data Nat Z (S Nat))
+      (def z Z)
+      (def s S))
+ (sig (type Nat)
+      (val z : Nat)
+      (val s : {Nat -> Nat})))
+
 ;; ---------------------------
 

@@ -8,7 +8,8 @@
                      u-type-literals
                      path->u-type-path u-type-path->path
                      path->u-mod-path u-mod-path->path
-                     u-type-app->type))
+                     u-type-app->type
+                     u-type-app->type/lenient))
 
 (require
  syntax/parse/define
@@ -178,5 +179,10 @@
   (define (u-type-app->type ua)
     (syntax-parse ua
       [u:u-type-app #'u.norm]))
+
+  (define (u-type-app->type/lenient ua)
+    (syntax-parse ua
+      [u:u-type-app #'u.norm]
+      [_ #f]))
 
   )

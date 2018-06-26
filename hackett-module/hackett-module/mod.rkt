@@ -1,6 +1,7 @@
 #lang racket/base
 (require
  "rep/sig-literals.rkt"
+ "rep/apply-type.rkt"
  "namespace/reqprov.rkt"
  racket/pretty
  syntax/parse/define
@@ -24,10 +25,12 @@
              syntax/parse
              syntax/kerncase
              syntax/id-set
+             syntax/id-table
              "rep/sig.rkt"
              "rep/resugar.rkt"
              "check/expand-check.rkt"
-             "namespace/namespace.rkt"))
+             "namespace/namespace.rkt"
+             "util/stx-traverse.rkt"))
 
 (provide
  (module-out mod))
@@ -70,7 +73,7 @@
                                  #'#%variable-reference)))
 
   (define-syntax-class hackett-module-component
-    #:attributes [sig-entry [val-id 1] [mod-id 1] residual]
+    #:attributes [sig-entry [val-id 1] [type-id 1] [mod-id 1] residual]
     #:literal-sets [mod-stop-literals]
 
     ;; NOTE: we are not introducing the type namespace
@@ -79,6 +82,7 @@
     [pattern (hkt:: ~! id:id type:expr {~optional #:exact})
              #:with sig-entry #'(sig:val id : type)
              #:with [val-id ...] #'[id]
+             #:with [type-id ...] #'[]
              #:with [mod-id ...] #'[]
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
@@ -89,15 +93,19 @@
                        {~and {~seq variant-stuff ...}
                              {~seq variant:data-constructor-spec}}
                        ...)
+             #:with {~type T*} #'head.tag
              #:with sig-entry #'(sig:data head-stuff ... variant-stuff ... ...)
              #:with [val-id ...] #'[variant.tag ...]
+             #:with [type-id ...] #'[T*]
              #:with [mod-id ...] #'[]
              ;; TODO: attach the other things
              #:with residual #'(values)]
 
     [pattern (hkt:type ~! {~and spec {~or x:id (x:id . _)}} rhs:expr)
+             #:with {~type T*} #'x
              #:with sig-entry #'(sig:type spec = rhs)
              #:with [val-id ...] #'[]
+             #:with [type-id ...] #'[T*]
              #:with [mod-id ...] #'[]
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
@@ -112,6 +120,7 @@
                                  #,(sig:internal-decl-struct
                                     key #'M* #'(#%module-decl sig)))
              #:with [val-id ...] #'[]
+             #:with [type-id ...] #'[]
              #:with [mod-id ...] #'[M*]
              #:with residual #'(values)]
 
@@ -179,7 +188,7 @@
              #:with :mod/acc-sig #'next]))
 
 (define-syntax-parser mod/acc
-  [(_ [sig-entry/rev ...] [val-id/rev ...] [mod-id/rev ...])
+  [(_ [sig-entry/rev ...] [val-id/rev ...] [type-id/rev ...] [mod-id/rev ...])
 
    #:with [val-id ...] (reverse (attribute val-id/rev))
    #:with [[val-sym/id ...] ...] #'[['val-id val-id] ...]
@@ -201,7 +210,22 @@
    #:with [[submod-sym/id ...] ...] #'[['mod-id/rev mod-id/rev] ...]
 
    #:with [sig-entry ...] (reverse (attribute sig-entry/rev))
-   #:with s:sig #'(sig:sig sig-entry ...)
+   #:do [(define type-ids (make-immutable-free-id-table
+                           (map cons
+                                (attribute type-id/rev)
+                                (attribute type-id/rev))))
+         (define (fix-inferred-app-con-types stx)
+           (syntax-parse stx
+             #:literal-sets [u-type-literals]
+             [{~#%type:app* (#%type:con inner-id:id) arg ...}
+              #:with outer-id (free-id-table-ref type-ids #'inner-id #f)
+              #:when (identifier? #'outer-id)
+              #:with [arg* ...] (map fix-inferred-app-con-types (attribute arg))
+              #'(#%apply-type outer-id arg* ...)]
+             [({~literal sig:#%internal-decl} _) stx]
+             [_
+              (traverse-stx/recur stx fix-inferred-app-con-types)]))]
+   #:with s:sig (fix-inferred-app-con-types #'(sig:sig sig-entry ...))
    #:with s-reintro
    (for/fold ([stx #'s.expansion])
              ([mod-id (in-list (attribute mod-id))])
@@ -223,13 +247,14 @@
      (syntax-local-introduce
       (attribute s-reintro)))]
 
-  [(head [ent/rev ...] [v/rev ...] [m/rev ...] defn rest-defn ...)
+  [(head [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...] defn rest-defn ...)
    #:with defn- (local-expand #'defn 'module mod-stop-ids)
    (syntax-parse #'defn-
      #:literal-sets [mod-stop-literals]
 
      [(begin form ...)
-      #'(mod/acc [ent/rev ...] [v/rev ...] [m/rev ...] form ... rest-defn ...)]
+      #'(mod/acc [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...]
+                 form ... rest-defn ...)]
 
      [d:hackett-module-component
       (syntax-track-origin
@@ -237,6 +262,7 @@
            defn-
            (mod/acc [d.sig-entry ent/rev ...]
                     [d.val-id ... v/rev ...]
+                    [d.type-id ... t/rev ...]
                     [d.mod-id ... m/rev ...]
                     rest-defn ...))
        #'d.residual
@@ -245,7 +271,8 @@
      [:pass-through
       #'(begin
           defn-
-          (mod/acc [ent/rev ...] [v/rev ...] [m/rev ...] rest-defn ...))]
+          (mod/acc [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...]
+                   rest-defn ...))]
 
      [{~and (head . _) :disallowed}
       (raise-syntax-error #f
@@ -261,7 +288,7 @@
    ;; expand `mod/acc` in a (let () ....) to parse the definitions
    #:with expansion:mod/acc-sig
    (local-expand #'(let ()
-                     (mod/acc [] [] [] defn* ...))
+                     (mod/acc [] [] [] [] defn* ...))
                  'module
                  '())
 

@@ -215,7 +215,7 @@
   (λ (self)
     (match-define (declared-type-transformer stxprop _) self)
     (define (how-to-resugar path stx ctx)
-      (u-type-app->type stx))
+      (or (u-type-app->type/lenient stx) stx))
     (resugar-origin stxprop
                     how-to-resugar)))
 
