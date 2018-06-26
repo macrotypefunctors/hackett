@@ -49,6 +49,18 @@
       (type Y = X))
  (sig (type Y)))
 
+(check-sig-matches
+ (sig (data X))
+ (sig (type X)))
+
+(check-sig-matches
+ (sig (data Nat Z (S Nat))
+      (val z : Nat)
+      (val s : {Nat -> Nat}))
+ (sig (type Nat)
+      (val z : Nat)
+      (val s : {Nat -> Nat})))
+
 ;; -----------------
 
 (def-signature I  (sig (type t)))

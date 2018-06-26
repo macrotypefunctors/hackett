@@ -98,6 +98,25 @@
                   #:when (free-identifier=? #'Y1 #'Y1-ref1)
                   #:when (free-identifier=? #'Y1 #'Y1-ref2))
 
+  (check-stxparse (expand-sig
+                   #'(sig
+                      (data D C)
+                      (val c : D)))
+                  #:literal-sets [sig-literals u-type-literals]
+                  (~sig
+                   [#s(namespaced type D)
+                    D1
+                    (#%type-decl (#%data [] C2-ref))]
+                   [#s(namespaced value C)
+                    C2
+                    (#%constructor-decl (#%apply-type D1-ref1))]
+                   [#s(namespaced value c)
+                    c3
+                    (#%val-decl (#%apply-type D1-ref2))])
+                  #:when (free-identifier=? #'C2 #'C2-ref)
+                  #:when (free-identifier=? #'D1 #'D1-ref1)
+                  #:when (free-identifier=? #'D1 #'D1-ref2))
+
   ;; ---------------
 
   (check-stxparse (sig (type (X a))
