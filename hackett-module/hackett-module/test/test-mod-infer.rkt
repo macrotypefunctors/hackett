@@ -66,5 +66,14 @@
       (val z : Nat)
       (val s : {Nat -> Nat})))
 
+(def-module M
+  (mod (data (D a) (C a))
+       (defn f [[(C x)] {x + 2}])))
+
+(check-mod-matches
+ M
+ (sig (data (D a) (C a))
+      (val f : {(D Integer) -> Integer})))
+
 ;; ---------------------------
 
