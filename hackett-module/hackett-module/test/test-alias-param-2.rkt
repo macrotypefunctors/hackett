@@ -11,16 +11,14 @@
 (def-module F
   (λ ([M : S])
     (mod
-     (: t5 (M.T Integer))
-     (def t5
+     (def t5 : (M.T Integer)
        (M.make-t 5)))))
 
 (def-module T
   (mod
    (type (T a) a)
 
-   (: make-t (∀ [a] {a -> (T a)}))
-   (defn make-t
+   (defn make-t : (∀ [a] {a -> (T a)})
      [[a] a])
    ))
 

@@ -13,8 +13,7 @@
 (def-module C1
   (seal (mod
          (type (C A) A)
-         (: make (∀ [A] {A -> (C A)}))
-         (def make id))
+         (def make : (∀ [A] {A -> (C A)}) id))
         :>
         C))
 

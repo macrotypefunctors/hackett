@@ -17,7 +17,7 @@
   (mod
    (type (T a) a)
 
-   (: f (∀ [a] {a -> (T a)}))
-   (defn f [[a] a])
+   (defn f : (∀ [a] {a -> (T a)})
+     [[a] a])
    ))
 

@@ -1,8 +1,9 @@
-#lang racket/base
+#lang hackett
 
 (provide define-binary-check test)
 
-(require hackett)
+(require (only-in racket/base for-syntax submod
+                  begin-for-syntax begin define-syntax))
 (require hackett
          syntax/parse/define
          (submod hackett/private/test shared)

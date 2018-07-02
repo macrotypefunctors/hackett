@@ -16,6 +16,7 @@
           data-constructor-spec
           type-constructor-spec)
  (prefix-in hkt: hackett/base)
+ (only-in hackett/private/base [core-def hkt:core-def])
  (prefix-in sig: (unmangle-in #:no-introduce "sig.rkt"))
  (prefix-in mod: (unmangle-in #:no-introduce "def.rkt"))
  (prefix-in l: "link/mod.rkt")
@@ -40,10 +41,11 @@
 
   (define-literal-set mod-stop-literals
     #:literal-sets [kernel-literals]
-    [hkt:: hkt:type hkt:data mod:def-module])
+    [hkt:core-def hkt:: hkt:type hkt:data mod:def-module])
 
   (define mod-stop-ids
-    (list #'hkt::
+    (list #'hkt:core-def
+          #'hkt::
           #'hkt:type
           #'hkt:data
           #'mod:def-module
@@ -79,7 +81,7 @@
     ;; NOTE: we are not introducing the type namespace
     ;;   here, because they will be introduced by `sig:val`
     ;;   and `sig:type` (the surface syntax).
-    [pattern (hkt:: ~! id:id type:expr {~optional #:exact})
+    [pattern (hkt:core-def ~! id:id _ hkt:: type:expr {~optional #:exact} _ ...)
              #:with sig-entry #'(sig:val id : type)
              #:with [val-id ...] #'[id]
              #:with [type-id ...] #'[]

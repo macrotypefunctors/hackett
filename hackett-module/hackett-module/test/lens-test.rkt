@@ -54,15 +54,15 @@
   (λ ([L : LENS])
     (mod
      ;; (C X) = (Tuple X Y)
-     (: tuple-fst-lens (∀ [X1 X2 Y] (L.Lens (Tuple X1 Y) (Tuple X2 Y) X1 X2)))
      (def tuple-fst-lens
+       : (∀ [X1 X2 Y] (L.Lens (Tuple X1 Y) (Tuple X2 Y) X1 X2))
        (L.make-lens
         (λ* [[(Tuple fst snd)] fst])
         (λ* [[(Tuple fst snd) fst] (Tuple fst snd)])))
 
      ;; (C Y) = (Tuple X Y)
-     (: tuple-snd-lens (∀ [X Y1 Y2] (L.Lens (Tuple X Y1) (Tuple X Y2) Y1 Y2)))
      (def tuple-snd-lens
+       : (∀ [X Y1 Y2] (L.Lens (Tuple X Y1) (Tuple X Y2) Y1 Y2))
        (L.make-lens
         (λ* [[(Tuple fst snd)] snd])
         (λ* [[(Tuple fst snd) snd] (Tuple fst snd)])))
@@ -136,25 +136,21 @@
      (Lens {CA -> A}
            {CA -> B -> CB}))
 
-   (: make-lens (∀ [CA CB A B]
-                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
-   (: get (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> A}))
-   (: set (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> B -> CB}))
-   (: modify (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
    (def make-lens Lens)
    (defn get [[(Lens get set)] get])
    (defn set [[(Lens get set)] set])
    (defn modify
+     : (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> {A -> B} -> CB})
      [[(Lens get set) ca f]
       (set ca (f (get ca)))])
 
-   (: thrush (∀ [CCA CCB CA CB A B]
-                {(Lens CCA CCB CA CB)
-                 ->
-                 (Lens CA CB A B)
-                 ->
-                 (Lens CCA CCB A B)}))
    (defn thrush
+     : (∀ [CCA CCB CA CB A B]
+          {(Lens CCA CCB CA CB)
+           ->
+           (Lens CA CB A B)
+           ->
+           (Lens CCA CCB A B)})
      [[l1 l2]
       (let ([g1 (get l1)]
             [g2 (get l2)]
@@ -180,30 +176,34 @@
   (mod
    (data (Lens CA CB A B)
      (L (∀ [f] (Functor f) => {{A -> (f B)} -> {CA -> (f CB)}})))
-   (: make-lens (∀ [CA CB A B]
-                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
+
    (defn make-lens
+     : (∀ [CA CB A B]
+          {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)})
      [[get set]
       (L (λ [afb ca]
            {(set ca) <$> (afb (get ca))}))])
 
-   (: get (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> A}))
-   (: set (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> B -> CB}))
-   (: modify (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
-           
-   (defn get [[(L l) ca] (get-const (l Const ca))])
-   (defn set [[ll ca b] (modify ll ca (λ [_] b))])
+   (defn get
+     : (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> A})
+     [[(L l) ca] (get-const (l Const ca))])
+
+   (defn set
+     : (∀ [CA CB A B] {(Lens CA CB A B) -> CA -> B -> CB})
+     [[ll ca b] (modify ll ca (λ [_] b))])
+
    (defn modify
+      :(∀ [CA CB A B] {(Lens CA CB A B) -> CA -> {A -> B} -> CB})
      [[(L l) ca f]
       (run-identity (l {Identity |.| f} ca))])
 
-   (: thrush (∀ [CCA CCB CA CB A B]
-                {(Lens CCA CCB CA CB)
-                 ->
-                 (Lens CA CB A B)
-                 ->
-                 (Lens CCA CCB A B)}))
    (defn thrush
+     : (∀ [CCA CCB CA CB A B]
+          {(Lens CCA CCB CA CB)
+           ->
+           (Lens CA CB A B)
+           ->
+           (Lens CCA CCB A B)})
      [[(L l1) (L l2)]
       (L {l1 |.| l2})])))
 
@@ -218,37 +218,29 @@
    (data (Lens CA CB A B)
      (L {CA -> (Tuple A {B -> CB})}))
 
-   (: make-lens (∀ [CA CB A B]
-                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
    (defn make-lens
      [[get set]
       (L (λ [ca] (Tuple (get ca) (set ca))))])
 
-   (: get (∀ [CA CB A B]
-             {(Lens CA CB A B) -> CA -> A}))
    (defn get
      [[(L l) ca] (case (l ca)
                    [(Tuple a _) a])])
 
-   (: set (∀ [CA CB A B]
-             {(Lens CA CB A B) -> CA -> B -> CB}))
    (defn set
      [[(L l) ca] (case (l ca)
                    [(Tuple _ f) f])])
 
-   (: modify (∀ [CA CB A B]
-                {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
    (defn modify
      [[(L l) ca a->b] (case (l ca)
                         [(Tuple a f) (f (a->b a))])])
 
-   (: thrush (∀ [CCA CCB CA CB A B]
-                {(Lens CCA CCB CA CB)
-                 ->
-                 (Lens CA CB A B)
-                 ->
-                 (Lens CCA CCB A B)}))
    (defn thrush
+     : (∀ [CCA CCB CA CB A B]
+          {(Lens CCA CCB CA CB)
+           ->
+           (Lens CA CB A B)
+           ->
+           (Lens CCA CCB A B)})
      [[(L l1) (L l2)]
       (L (λ (cca)
            (case (l1 cca)
@@ -269,36 +261,36 @@
    (type (Lens CA CB A B)
          {CA -> (Tuple A {B -> CB})})
 
-   (: make-lens (∀ [CA CB A B]
-                   {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)}))
    (defn make-lens
+     : (∀ [CA CB A B]
+          {{CA -> A} -> {CA -> B -> CB} -> (Lens CA CB A B)})
      [[get set ca] (Tuple (get ca) (set ca))])
 
-   (: get (∀ [CA CB A B]
-             {(Lens CA CB A B) -> CA -> A}))
    (defn get
+     : (∀ [CA CB A B]
+          {(Lens CA CB A B) -> CA -> A})
      [[l ca] (case (l ca)
                [(Tuple a _) a])])
 
-   (: set (∀ [CA CB A B]
-             {(Lens CA CB A B) -> CA -> B -> CB}))
    (defn set
+     : (∀ [CA CB A B]
+          {(Lens CA CB A B) -> CA -> B -> CB})
      [[l ca] (case (l ca)
                [(Tuple _ f) f])])
 
-   (: modify (∀ [CA CB A B]
-                {(Lens CA CB A B) -> CA -> {A -> B} -> CB}))
    (defn modify
+     : (∀ [CA CB A B]
+          {(Lens CA CB A B) -> CA -> {A -> B} -> CB})
      [[l ca a->b] (case (l ca)
                     [(Tuple a f) (f (a->b a))])])
 
-   (: thrush (∀ [CCA CCB CA CB A B]
-                {(Lens CCA CCB CA CB)
-                 ->
-                 (Lens CA CB A B)
-                 ->
-                 (Lens CCA CCB A B)}))
    (defn thrush
+     : (∀ [CCA CCB CA CB A B]
+          {(Lens CCA CCB CA CB)
+           ->
+           (Lens CA CB A B)
+           ->
+           (Lens CCA CCB A B)})
      [[l1 l2 cca]
       (case (l1 cca)
         [(Tuple ca cb->ccb)

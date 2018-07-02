@@ -65,15 +65,14 @@
        (type Val V.T)
        (type Dict (List (Tuple Key Val)))
 
-       (: empty Dict)
-       (def empty Nil)
+       (def empty : Dict Nil)
 
-       (: insert {Dict -> Key -> Val -> Dict})
-       (defn insert 
+       (defn insert
+         : {Dict -> Key -> Val -> Dict}
          [[d k v] {(Tuple k v) :: d}])
 
-       (: lookup {Dict -> Key -> (Maybe Val)})
        (defn lookup
+         : {Dict -> Key -> (Maybe Val)}
          [[Nil lk] Nothing]
          [[{(Tuple dk dv) :: rst} lk]
           (if (Key.eq dk lk)
