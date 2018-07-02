@@ -59,6 +59,7 @@
                        [syntax-local-elaborate-top
                         (-> syntax? syntax?)])
          elaborate-pass?
+         call-with-no-elaborate-pass
          syntax-local-elaborate-pass
          syntax-local-elaborating-with-defers?
          syntax-local-elaborate-defer-id
@@ -77,6 +78,13 @@
 (define current-elaborate-did-make-progress? (make-parameter #f))
 (define current-elaborate-did-defer? (make-parameter #f))
 (define current-elaborate-defer-id (make-parameter #f))
+
+(define (call-with-no-elaborate-pass f)
+  (parameterize ([current-syntax-elaborate-pass #f]
+                 [current-elaborate-did-make-progress? #f]
+                 [current-elaborate-did-defer? #f]
+                 [current-elaborate-defer-id #f])
+    (f)))
 
 (define (syntax-local-elaborate-pass) (current-syntax-elaborate-pass))
 (define (syntax-local-elaborating-with-defers?)

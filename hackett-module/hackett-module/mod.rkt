@@ -27,6 +27,7 @@
              syntax/kerncase
              syntax/id-set
              syntax/id-table
+             hackett/private/expand+elaborate
              "rep/sig.rkt"
              "rep/resugar.rkt"
              "check/expand-check.rkt"
@@ -250,7 +251,7 @@
       (attribute s-reintro)))]
 
   [(head [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...] defn rest-defn ...)
-   #:with defn- (local-expand #'defn 'module mod-stop-ids)
+   #:with defn- (local-expand/defer-elaborate #'defn 'module mod-stop-ids)
    (syntax-parse #'defn-
      #:literal-sets [mod-stop-literals]
 
@@ -289,10 +290,10 @@
 
    ;; expand `mod/acc` in a (let () ....) to parse the definitions
    #:with expansion:mod/acc-sig
-   (local-expand #'(let ()
-                     (mod/acc [] [] [] [] defn* ...))
-                 'module
-                 '())
+   (call-with-no-elaborate-pass
+    (λ ()
+      (local-expand+elaborate #'(let ()
+                                  (mod/acc [] [] [] [] defn* ...)))))
 
    (attach-sig #'expansion
                (attribute expansion.sig))])
