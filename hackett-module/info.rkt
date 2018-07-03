@@ -5,6 +5,7 @@
 (define deps
   '("base"
     "hackett-lib"
+    "hackett-test"
     "threading-lib"
     "syntax-classes-lib"
     "struct-like-struct-type-property"
