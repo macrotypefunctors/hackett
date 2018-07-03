@@ -6,6 +6,7 @@
          syntax/parse/define
          (for-syntax racket/base
                      racket/match
+                     syntax/intdef
                      hackett/private/expand+elaborate))
 
 ;; A lot of this code is copied from `racket/block`.
@@ -113,7 +114,10 @@
       (define exprs/1 (partially-expand-in-ctxs/defer init-exprs def-ctx ctx))
       (define exprs/2 (continue-expand-in-ctxs/defer exprs/1 def-ctx ctx))
       ;; reconstruct the block with the partially expanded forms
-      (syntax-local-elaborate-defer #`(head . #,exprs/2))]
+      (syntax-local-elaborate-defer
+       (internal-definition-context-track
+        def-ctx
+        #`(head . #,exprs/2)))]
      ['finalize
       #'(block form ...)])])
 
