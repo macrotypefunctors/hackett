@@ -20,6 +20,7 @@
  (prefix-in sig: (unmangle-in #:no-introduce "sig.rkt"))
  (prefix-in mod: (unmangle-in #:no-introduce "def.rkt"))
  (prefix-in l: "link/mod.rkt")
+ "util/block-defer-reconstruct.rkt"
  (for-syntax racket/base
              racket/match
              racket/list
@@ -292,7 +293,7 @@
    #:with expansion:mod/acc-sig
    (call-with-no-elaborate-pass
     (λ ()
-      (local-expand+elaborate #'(let ()
+      (local-expand+elaborate #'(block/defer-reconstruct
                                   (mod/acc [] [] [] [] defn* ...)))))
 
    (attach-sig #'expansion
