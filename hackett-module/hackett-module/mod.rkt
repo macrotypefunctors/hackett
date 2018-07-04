@@ -77,7 +77,7 @@
                                  #'#%variable-reference)))
 
   (define-syntax-class hackett-module-component
-    #:attributes [sig-entry [val-id 1] [type-id 1] [mod-id 1] residual]
+    #:attributes [sig-entry mod-entry- [val-id 1] [type-id 1] [mod-id 1] residual]
     #:literal-sets [mod-stop-literals]
 
     ;; NOTE: we are not introducing the type namespace
@@ -85,6 +85,7 @@
     ;;   and `sig:type` (the surface syntax).
     [pattern (hkt:core-def ~! id:id _ hkt:: type:expr {~optional #:exact} _ ...)
              #:with sig-entry #'(sig:val id : type)
+             #:with mod-entry- this-syntax
              #:with [val-id ...] #'[id]
              #:with [type-id ...] #'[]
              #:with [mod-id ...] #'[]
@@ -99,6 +100,7 @@
                        ...)
              #:with {~type T*} #'head.tag
              #:with sig-entry #'(sig:data head-stuff ... variant-stuff ... ...)
+             #:with mod-entry- this-syntax
              #:with [val-id ...] #'[variant.tag ...]
              #:with [type-id ...] #'[T*]
              #:with [mod-id ...] #'[]
@@ -108,6 +110,7 @@
     [pattern (hkt:type ~! {~and spec {~or x:id (x:id . _)}} rhs:expr)
              #:with {~type T*} #'x
              #:with sig-entry #'(sig:type spec = rhs)
+             #:with mod-entry- this-syntax
              #:with [val-id ...] #'[]
              #:with [type-id ...] #'[T*]
              #:with [mod-id ...] #'[]
@@ -123,6 +126,7 @@
              #:with sig-entry #`(sig:#%internal-decl
                                  #,(sig:internal-decl-struct
                                     key #'M* #'(#%module-decl sig)))
+             #:with mod-entry- this-syntax
              #:with [val-id ...] #'[]
              #:with [type-id ...] #'[]
              #:with [mod-id ...] #'[M*]
@@ -265,7 +269,7 @@
      [d:hackett-module-component
       (syntax-track-origin
        #'(begin
-           defn-
+           d.mod-entry-
            (mod/acc [d.sig-entry ent/rev ...]
                     [d.val-id ... v/rev ...]
                     [d.type-id ... t/rev ...]
