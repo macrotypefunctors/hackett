@@ -192,7 +192,8 @@
              #:with :mod/acc-sig #'next]))
 
 (define-syntax-parser mod/acc
-  [(_ [sig-entry/rev ...] [val-id/rev ...] [type-id/rev ...] [mod-id/rev ...])
+  [(_ [sig-entry/rev ...] [val-id/rev ...] [type-id/rev ...] [mod-id/rev ...]
+      [])
 
    #:with [val-id ...] (reverse (attribute val-id/rev))
    #:with [[val-sym/id ...] ...] #'[['val-id val-id] ...]
@@ -251,14 +252,15 @@
      (syntax-local-introduce
       (attribute s-reintro)))]
 
-  [(head [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...] defn rest-defn ...)
+  [(head [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...]
+         [defn rest-defn ...])
    #:with defn- (local-expand/defer-elaborate #'defn 'module mod-stop-ids)
    (syntax-parse #'defn-
      #:literal-sets [mod-stop-literals]
 
      [(begin form ...)
       #'(mod/acc [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...]
-                 form ... rest-defn ...)]
+                 [form ... rest-defn ...])]
 
      [d:hackett-module-component
       (syntax-track-origin
@@ -268,7 +270,7 @@
                     [d.val-id ... v/rev ...]
                     [d.type-id ... t/rev ...]
                     [d.mod-id ... m/rev ...]
-                    rest-defn ...))
+                    [rest-defn ...]))
        #'d.residual
        #'head)]
 
@@ -276,7 +278,7 @@
       #'(begin
           defn-
           (mod/acc [ent/rev ...] [v/rev ...] [t/rev ...] [m/rev ...]
-                   rest-defn ...))]
+                   [rest-defn ...]))]
 
      [{~and (head . _) :disallowed}
       (raise-syntax-error #f
@@ -294,7 +296,7 @@
    (call-with-no-elaborate-pass
     (λ ()
       (local-expand+elaborate #'(block/defer-reconstruct
-                                  (mod/acc [] [] [] [] defn* ...)))))
+                                  (mod/acc [] [] [] [] [defn* ...])))))
 
    (attach-sig #'expansion
                (attribute expansion.sig))])
