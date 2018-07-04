@@ -18,6 +18,8 @@
 
 (provide (for-syntax class-id)
          class instance derive-instance)
+(module+ private
+  (provide register-class-instance!))
 
 (begin-for-syntax
   (define-syntax-class (class-id #:require-deriving-transformer? [require-deriving-transformer? #f])
@@ -234,13 +236,12 @@
    (~> #`(begin-
            (define-values [] constr-.residual) ...
            (define-values [] bare-t-.residual) ...
-           (begin-for-syntax-
-             (register-global-class-instance!
-              (class:instance (quote-syntax class)
-                              (list (quote-syntax var-id-) ...)
-                              (list (quote-syntax constr-/reduced) ...)
-                              (list (quote-syntax bare-t-.expansion) ...)
-                              (quote-syntax dict-id-))))
+           (register-class-instance!
+            (class:instance (quote-syntax class)
+                            (list (quote-syntax var-id-) ...)
+                            (list (quote-syntax constr-/reduced) ...)
+                            (list (quote-syntax bare-t-.expansion) ...)
+                            (quote-syntax dict-id-)))
            ; The defined dict-id- might appear in the expansion of :/instance-dictionary, since it
            ; performs dictionary elaboration. At the top level, this can cause problems, since
            ; recursive/self-referential definitions are complicated. We can perform a sort of “forward
@@ -265,6 +266,11 @@
                              (cons (syntax-local-introduce #'class))
                              (cons (and~> (attribute ∀/use) syntax-local-introduce))
                              (cons (and~> (attribute =>/use) syntax-local-introduce)))))])
+
+(define-syntax-parser register-class-instance!
+  [(_ inst)
+   #'(begin-for-syntax-
+       (register-global-class-instance! inst))])
 
 (define-syntax-parser :/instance-dictionary
   #:literals [:]
