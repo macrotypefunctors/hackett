@@ -15,8 +15,11 @@
           data-constructor-make-match-pat
           data-constructor-spec
           type-constructor-spec)
- (prefix-in hkt: hackett/base)
+ (prefix-in hkt: (unmangle-in hackett/base))
+ (prefix-in hkt: (only-in (unmangle-in hackett/prelude) Unit))
  (only-in hackett/private/base [core-def hkt:core-def])
+ (only-in (submod hackett/private/class private)
+          [register-class-instance! hkt:register-class-instance!])
  (prefix-in sig: (unmangle-in #:no-introduce "sig.rkt"))
  (prefix-in mod: (unmangle-in #:no-introduce "def.rkt"))
  (prefix-in l: "link/mod.rkt")
@@ -24,11 +27,13 @@
  (for-syntax racket/base
              racket/match
              racket/list
+             racket/syntax
              syntax/parse
              syntax/kerncase
              syntax/id-set
              syntax/id-table
              hackett/private/expand+elaborate
+             hackett/private/typeclass
              "rep/sig.rkt"
              "rep/resugar.rkt"
              "check/expand-check.rkt"
@@ -43,10 +48,16 @@
 
   (define-literal-set mod-stop-literals
     #:literal-sets [kernel-literals]
-    [hkt:core-def hkt:: hkt:type hkt:data mod:def-module])
+    [hkt:core-def
+     hkt:register-class-instance!
+     hkt::
+     hkt:type
+     hkt:data
+     mod:def-module])
 
   (define mod-stop-ids
     (list #'hkt:core-def
+          #'hkt:register-class-instance!
           #'hkt::
           #'hkt:type
           #'hkt:data
@@ -92,6 +103,14 @@
              #:with residual (syntax-property #'(values)
                                               disappeared-binding
                                               (syntax-local-introduce #'id))]
+
+    [pattern (hkt:register-class-instance! inst)
+             #:with sig-entry #'(sig:val instance : hkt:Unit)
+             #:with mod-entry- #'(register-local-class-instance! inst)
+             #:with [val-id ...] #'[]
+             #:with [type-id ...] #'[]
+             #:with [mod-id ...] #'[]
+             #:with residual #'(values)]
 
     [pattern (hkt:data {~and {~seq head-stuff ...}
                              {~seq head:type-constructor-spec}}
@@ -304,3 +323,27 @@
 
    (attach-sig #'expansion
                (attribute expansion.sig))])
+
+
+;; ---------------------------------------------------------
+
+(define-syntax-parser register-local-class-instance!
+  [(head inst)
+   (match (syntax-local-elaborate-pass)
+     ['expand
+      (syntax-local-elaborate-defer
+       (quasisyntax/loc this-syntax
+         (head inst)))]
+     ['elaborate
+      (define new-instances (list (syntax-local-eval #'inst)))
+      (current-local-class-instances
+       (append new-instances (current-local-class-instances)))
+      (syntax-local-elaborate-defer
+       (quasisyntax/loc this-syntax
+         (head inst)))]
+     ['finalize
+      (define new-instances (list (syntax-local-eval #'inst)))
+      (current-local-class-instances
+       (append new-instances (current-local-class-instances)))
+      #'(begin)])])
+
