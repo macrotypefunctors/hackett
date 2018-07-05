@@ -117,7 +117,8 @@
     #:context 'syntax-local-declare-decl
     #:literal-sets [sig-literals]
     [{~or (#%val-decl . _)
-          (#%constructor-decl . _)}
+          (#%constructor-decl . _)
+          (#%instance-decl . _)}
      #:with path path-to-id
      (define rhs
        #'(make-variable-like-transformer (quote-syntax path)))
@@ -383,6 +384,39 @@
                               (module-decl signature.expansion))
            #:attr residual (residual #'[signature.residual expansion]
                                      #'module-decl)]
+
+  ;; (#%instance-decl class [x ...] [constraint ...] [bare-t ...])
+  [pattern (instance-decl:#%instance-decl
+            {~var class (type intdef-ctx)}
+            [x:id ...]
+            [constr:expr ...]
+            [bare-t:expr ...])
+
+           ;; create a context where the xs are bound
+           #:do [(define intdef-ctx* (syntax-local-make-definition-context intdef-ctx))
+                 (define (intro stx)
+                   (internal-definition-context-introduce intdef-ctx* stx))
+                 (syntax-local-bind-syntaxes (attribute x) #f intdef-ctx*)]
+
+           #:with [x- ...] (map intro (attribute x))
+           #:with [{~var constraint (type intdef-ctx*)} ...]
+           (map intro (@ constr))
+           #:with [{~var bare-τ (type intdef-ctx*)} ...]
+           (map intro (@ bare-t))
+
+           #:attr expansion (~>>
+                             (syntax/loc/props this-syntax
+                               (instance-decl
+                                class.expansion
+                                [x- ...]
+                                [constraint.expansion ...]
+                                [bare-τ.expansion ...]))
+                             (internal-definition-context-track intdef-ctx*))
+
+           #:attr residual (residual #'[constraint.residual ...
+                                        bare-τ.residual ...
+                                        expansion]
+                                     #'instance-decl)]
 
   )
 

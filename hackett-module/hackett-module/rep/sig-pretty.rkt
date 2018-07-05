@@ -85,7 +85,18 @@
      ;; TODO: use the types of the constructors to print the variants
      `(data (,name ,@(syntax->datum #'(x ...))) ....)]
     [(#%module-decl signature)
-     `(module ,name : ,(sig->datum #'signature))]))
+     `(module ,name : ,(sig->datum #'signature))]
+
+    [(#%instance-decl class [x ...] [constr ...] [bare-t ...])
+     (define (?wrap head lst v)
+       (cond [(empty? lst) v]
+             [else `(,head ,@lst ,v)]))
+     `(instance
+       ,(?∀/=> (syntax->datum #'(x ...))
+               (map type->string/sig (@ constr))
+               `(,(type->string/sig #'class)
+                 ,@(map type->string/sig (@ bare-t)))))]
+    ))
 
 ;; like Hackett's type->string, but handles module-specific forms (like #%dot)
 (define (type->string/sig t)
@@ -119,3 +130,13 @@
      #:with [a* ...] (map show-apps (attribute a))
      (template (?#%type:app* (#%type:con app) a* ...))]
     [_ (traverse-stx/recur t show-apps)]))
+
+;; -----------------
+
+;; [Listof Symbol] [Listof S-Expr] S-Expr -> S-Expr
+(define (?∀/=> syms constrs body)
+  (cond [(and (empty? syms) (empty? constrs)) body]
+        [(empty? constrs) `(∀ ,syms ,body)]
+        [(empty? syms) `(=> ,@constrs ,body)]
+        [else `(∀ ,syms ,@constrs => ,body)]))
+

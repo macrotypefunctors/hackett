@@ -9,6 +9,7 @@
          #%opaque
          #%data
          #%module-decl
+         #%instance-decl
          (for-syntax sig-literals
                      sig-literal-ids
                      ; ---
@@ -17,6 +18,7 @@
                      NAMESPACE:value  namespaced:value
                      NAMESPACE:type   namespaced:type
                      NAMESPACE:module namespaced:module
+                     namespaced:instance
                      ; ---
                      sig-internal-ids
                      sig-decls
@@ -26,7 +28,8 @@
                      decl-type-alias?
                      decl-val?
                      decl-constructor?
-                     decl-module?))
+                     decl-module?
+                     decl-instance?))
 
 (require (for-syntax racket/base
                      syntax/parse
@@ -42,9 +45,11 @@
   (define NAMESPACE:value 'value)
   (define NAMESPACE:type 'type)
   (define NAMESPACE:module 'module)
+  (define NAMESPACE:instance 'instance)
   (define (namespaced:value sym) (namespaced NAMESPACE:value sym))
   (define (namespaced:type sym) (namespaced NAMESPACE:type sym))
   (define (namespaced:module sym) (namespaced NAMESPACE:module sym))
+  (define (namespaced:instance sym) (namespaced NAMESPACE:instance sym))
   )
 
 ;; (#%sig
@@ -69,6 +74,7 @@
 ;;  - (#%type-decl (#%opaque [Id ...]))
 ;;  - (#%type-decl (#%data [Id ...] Id ...))  ; parameters, constructor ids
 ;;  - (#%module-decl Signature)
+;;  - (#%instance-decl Id [Id ...] [Constraint ...] [Type ...])
 
 (define-syntax #%val-decl #f)
 (define-syntax #%constructor-decl #f)
@@ -77,6 +83,8 @@
 (define-syntax #%opaque #f)
 (define-syntax #%data #f)
 (define-syntax #%module-decl #f)
+(define-syntax #%instance-decl #f)
+
 
 (begin-for-syntax
   (define sig-literal-ids
@@ -85,7 +93,8 @@
           #'#%val-decl
           #'#%constructor-decl
           #'#%type-decl #'#%alias #'#%opaque #'#%data
-          #'#%module-decl))
+          #'#%module-decl
+          #'#%instance-decl))
 
   (define-literal-set sig-literals
     [#%sig
@@ -93,7 +102,8 @@
      #%val-decl
      #%constructor-decl
      #%type-decl #%alias #%opaque #%data
-     #%module-decl]))
+     #%module-decl
+     #%instance-decl]))
 
 ;; -----------------------------------------------------------------
 
@@ -160,6 +170,13 @@
     (syntax-parse d
       #:literal-sets [sig-literals]
       [(#%module-decl _) #t]
+      [_ #f]))
+
+  ;; Decl -> Bool
+  (define (decl-instance? d)
+    (syntax-parse d
+      #:literal-sets [sig-literals]
+      [(#%instance-decl . _) #t]
       [_ #f]))
 
   )

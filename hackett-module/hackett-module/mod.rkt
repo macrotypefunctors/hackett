@@ -105,7 +105,19 @@
                                               (syntax-local-introduce #'id))]
 
     [pattern (hkt:register-class-instance! inst)
-             #:with sig-entry #'(sig:val instance : hkt:Unit)
+             #:do [(define instv (syntax-local-eval #'inst))
+                   (match-define
+                     (class:instance class-id var-ids constrs bare-ts dict-id)
+                     instv)
+                   (define key
+                     (namespaced:instance (gensym (syntax-e class-id))))]
+             #:with sig-entry #`(sig:#%internal-decl
+                                 #,(sig:internal-decl-struct
+                                    key dict-id
+                                    #`(#%instance-decl #,class-id
+                                                       #,var-ids
+                                                       #,constrs
+                                                       #,bare-ts)))
              #:with mod-entry- #'(register-local-class-instance! inst)
              #:with [val-id ...] #'[]
              #:with [type-id ...] #'[]
@@ -318,8 +330,10 @@
    #:with expansion:mod/acc-sig
    (call-with-no-elaborate-pass
     (λ ()
-      (local-expand+elaborate #'(block/defer-reconstruct
-                                  (mod/acc [] [] [] [] [defn* ...])))))
+      (parameterize ([current-local-class-instances
+                      (current-local-class-instances)])
+        (local-expand+elaborate #'(block/defer-reconstruct
+                                   (mod/acc [] [] [] [] [defn* ...]))))))
 
    (attach-sig #'expansion
                (attribute expansion.sig))])

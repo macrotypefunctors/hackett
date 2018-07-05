@@ -311,12 +311,16 @@
   (match-define
     (list opaque-type-keys data-type-keys alias-type-keys
           constructor-keys value-keys
-          submod-keys)
+          submod-keys
+          instance-keys)
     (partition-decl-keys
      (list decl-type-opaque? decl-type-data? decl-type-alias?
            decl-constructor? decl-val?
-           decl-module?)
+           decl-module?
+           decl-instance?)
      s-decls))
+
+  ;; TODO: do something with the instances
 
   ;; -------------
   ;; generate new ids for each decl
