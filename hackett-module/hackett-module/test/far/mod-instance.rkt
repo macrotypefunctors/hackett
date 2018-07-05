@@ -3,6 +3,13 @@
 (class (C a)
   [c : {a -> Integer}])
 
+(def-signature S
+  (sig
+   (instance (∀ (a) (C a) => (C (List a))))
+   (val x : Integer)
+   (val y : Integer)
+   (instance (C Integer))))
+
 (def-module M
   (mod
    (instance (C Integer)
@@ -15,4 +22,8 @@
    (def y
      (c (List 1 2 3 4)))
    ))
+
+(def-module F
+  (λ ([N : S])
+    (mod)))
 

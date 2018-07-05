@@ -184,7 +184,8 @@
     #:literal-sets [sig-literals]
     [(#%type-decl . _) #'#%dot_τ]
     [(#%module-decl . _) #'#%dot_m]
-    [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]))
+    [{~or (#%val-decl . _) (#%constructor-decl . _)} #'#%dot_e]
+    [(#%instance-decl . _) #'#%dot_i]))
 
 ;; ----------
 ;; declared module var transformer

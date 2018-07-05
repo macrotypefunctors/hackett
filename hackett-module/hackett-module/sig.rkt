@@ -22,9 +22,11 @@
                     value-namespace-introduce)
          hackett/private/type-reqprov
          (only-in hackett/private/adt data-constructor-spec)
-         (only-in (unmangle-in hackett/base) type data)
+         (only-in (submod hackett/private/class private) instance-spec)
+         (only-in (unmangle-in hackett/base) type data instance)
          (for-syntax racket/base
                      racket/match
+                     racket/syntax
                      syntax/parse
                      (only-in syntax/parse [attribute @])
                      syntax/parse/experimental/template
@@ -47,7 +49,7 @@
 (begin-for-syntax
   (define-literal-set sig-surface-literals
     #:datum-literals [: =]
-    [val type data module include-sig #%internal-decl])
+    [val type data module instance include-sig #%internal-decl])
 
   (define-syntax-class sig-entry
     #:attributes [[key 1] [id 1] [decl 1]]
@@ -130,7 +132,17 @@
     [pattern (module {~module X:id} : {~signature signature:expr})
       #:with [key ...]  #`[#,(namespaced:module #'X)]
       #:with [id ...]   #'[X]
-      #:with [decl ...] #'[(#%module-decl signature)]])
+      #:with [decl ...] #'[(#%module-decl signature)]]
+
+    [pattern (instance :instance-spec)
+      #:do [(define k (namespaced:instance (gensym (syntax-e #'class))))
+            (define x (generate-temporary #'class))]
+      #:with [key ...] #`[#,k]
+      #:with [id ...] #`[#,x]
+      #:with [decl ...] #'[(#%instance-decl class
+                                            [var-id ...]
+                                            [constr ...]
+                                            [bare-t ...])]])
 
   (define-syntax-class sig-entries
     #:attributes [[key 1] [id 1] [decl 1]]

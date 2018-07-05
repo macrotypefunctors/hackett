@@ -19,7 +19,8 @@
 (provide (for-syntax class-id)
          class instance derive-instance)
 (module+ private
-  (provide register-class-instance!))
+  (provide register-class-instance!
+           (for-syntax instance-spec)))
 
 (begin-for-syntax
   (define-syntax-class (class-id #:require-deriving-transformer? [require-deriving-transformer? #f])
