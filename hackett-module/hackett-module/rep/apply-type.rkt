@@ -106,8 +106,9 @@
   (define-template-metafunction ?#%apply-type
     (syntax-parser
       [(_ a b ...)
+       #:with apply-type (syntax/loc this-syntax #%apply-type)
        (quasitemplate/loc/props this-syntax
-         (?#%type:app* (#%type:con #%apply-type) a b ...))]))
+         (?#%type:app* (#%type:con apply-type) a b ...))]))
 
   (define-syntax ~#%apply-type
     (pattern-expander

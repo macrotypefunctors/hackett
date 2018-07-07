@@ -46,6 +46,8 @@
                                                    (list def-ctx))])
            (syntax-parse expr
              #:literals [begin define-syntaxes define-values]
+             [(begin)
+              (loop todo r)]
              [(begin . rest)
               (loop (append (syntax->list #'rest) todo) r)]
              [(define-syntaxes (id:id ...) rhs)
@@ -77,6 +79,8 @@
         [(cons expr todo)
          (syntax-parse expr
            #:literals [begin define-syntaxes define-values]
+           [(begin)
+            (loop todo r)]
            [(begin . rest)
             (loop (append (syntax->list #'rest) todo) r)]
            [(define-syntaxes (id:id ...) rhs)

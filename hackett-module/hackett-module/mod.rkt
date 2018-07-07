@@ -24,6 +24,7 @@
  (prefix-in mod: (unmangle-in #:no-introduce "def.rkt"))
  (prefix-in l: "link/mod.rkt")
  "util/block-defer-reconstruct.rkt"
+ "util/register-local-class-instance.rkt"
  (for-syntax racket/base
              racket/match
              racket/list
@@ -340,24 +341,4 @@
 
 
 ;; ---------------------------------------------------------
-
-(define-syntax-parser register-local-class-instance!
-  [(head inst)
-   (match (syntax-local-elaborate-pass)
-     ['expand
-      (syntax-local-elaborate-defer
-       (quasisyntax/loc this-syntax
-         (head inst)))]
-     ['elaborate
-      (define new-instances (list (syntax-local-eval #'inst)))
-      (current-local-class-instances
-       (append new-instances (current-local-class-instances)))
-      (syntax-local-elaborate-defer
-       (quasisyntax/loc this-syntax
-         (head inst)))]
-     ['finalize
-      (define new-instances (list (syntax-local-eval #'inst)))
-      (current-local-class-instances
-       (append new-instances (current-local-class-instances)))
-      #'(begin)])])
 

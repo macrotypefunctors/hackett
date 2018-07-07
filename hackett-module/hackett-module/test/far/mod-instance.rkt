@@ -27,3 +27,6 @@
   (λ ([N : S])
     (mod)))
 
+#;(def-module M*
+  (seal M :> S))
+

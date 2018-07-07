@@ -11,6 +11,7 @@
  syntax/parse/experimental/template
  (only-in syntax/parse [attribute @])
  syntax/parse/class/local-value
+ hackett/private/typeclass
  hackett/private/util/stx
  "expand-check-prop.rkt"
  "../rep/resugar.rkt"
@@ -28,7 +29,8 @@
                (only-in (unmangle-in "../dot/dot-t.rkt") [#%dot #%dot_τ])
                (only-in (unmangle-in "../dot/dot-m.rkt") [#%dot #%dot_m])
                (only-in racket/base #%app quote)
-               (prefix-in l: "../link/mod.rkt"))
+               (prefix-in l: "../link/mod.rkt")
+                "../util/register-local-class-instance.rkt")
  (for-template (except-in hackett/private/type-language
                           type-namespace-introduce
                           value-namespace-introduce
@@ -147,7 +149,8 @@
 ;; #:ctx IntdefCtx
 ;; ->
 ;; [List [Listof [List Id TransformerStx]]
-;;       [Listof [List Id Stx]]]
+;;       [Listof [List Id Stx]]
+;;       [Listof TransformerStx]]
 
 ;; Returns binding syntax for the given decl.
 ;; If `decl` is value/ctor decl, then `type-expand-ctx` must
@@ -181,13 +184,14 @@
      (define link-expr
        #`(l:mod-submod-ref parent-link-id 'key-sym))
 
-     (match-define `{,submod-stx-bindings ,submod-val-bindings}
+     (match-define `{,submod-stx-bindings ,submod-val-bindings ,submod-effs}
        (generate-module-var-bindings id
                                      link-internal-id
                                      #'signature))
 
      `{,submod-stx-bindings
-       ([,link-internal-id ,link-expr] ,@submod-val-bindings)}]
+       ([,link-internal-id ,link-expr] ,@submod-val-bindings)
+       ,submod-effs}]
 
     ;; ------
     ;; type decls
@@ -198,7 +202,7 @@
           (list (quote-syntax x) ...)
           (quote-syntax t)
           #f))
-     `{([,id ,rhs]) ()}]
+     `{([,id ,rhs]) () ()}]
 
     [(#%type-decl (#%opaque [x ...]))
      #:with inner-id (generate-temporary (format-symbol "inner-opaque:~a" id))
@@ -223,6 +227,7 @@
        #'(opaque-type-constructor))
      `{([,#'inner-id ,inner-rhs]
         [,id ,outer-rhs])
+       ()
        ()}]
 
     [(#%type-decl (#%data [x ...] c-id ...))
@@ -254,6 +259,7 @@
           #f))                                    ; fixity
      `{([,#'inner-id ,inner-rhs]
         [,id ,outer-rhs])
+       ()
        ()}]
 
     ;; ------
@@ -276,7 +282,8 @@
 
      `{([,id ,rhs])
        ([,#'link-val-id ,link-val-expr]
-        [,#'link-pat-id ,link-pat-expr])}]
+        [,#'link-pat-id ,link-pat-expr])
+       ()}]
 
     ;; ------
     ;; value decls
@@ -291,13 +298,40 @@
                                      (quote-syntax t*)))
 
      `{([,id ,rhs])
-       ([,#'link-val-id ,link-val-expr])}]))
+       ([,#'link-val-id ,link-val-expr])
+       ()}]
+
+    ;; ------
+    ;; instance decls
+
+    [(#%instance-decl class [x ...] [constr ...] [bare-t ...])
+     #:with (~#%type:forall* [x* ...]
+              (~#%type:qual* [constr* ...]
+                (~#%type:app* ({~literal #%type:con} class*) bare-t* ...)))
+     (expand-type
+      #'(?#%type:forall* [x ...]
+          (?#%type:qual* [constr ...] (?#%type:app* class bare-t ...)))
+      type-expansion-ctx)
+     #:with link-dict-id (generate-temporary (format-symbol "link:~a" id))
+     #:with link-dict-expr #''(l:mod-instance-lookup)
+     #:with inst-expr
+     #'(class:instance (quote-syntax class*)
+                       (list (quote-syntax x*) ...)
+                       (list (quote-syntax constr*) ...)
+                       (list (quote-syntax bare-t*) ...)
+                       (quote-syntax link-dict-id))
+
+     `{()
+       ([,#'link-dict-id ,#'link-dict-expr])
+       (,#'inst-expr)}]
+    ))
 
 ;; Generates bindings needed to introduce a module with the
 ;; given name and signature.
 ;; Id Id Signature ->
 ;;   [List [Listof [List Id TransformerStx]]     ; transformer bindings
-;;         [Listof [List Id Stx]]]               ; value binding
+;;         [Listof [List Id Stx]]                ; value bindings
+;;         [Listof TransformerStx]]              ; compile-time effects
 (define (generate-module-var-bindings name link-id s)
 
   (define/syntax-parse unique-symbol (gensym (syntax-e name)))
@@ -348,6 +382,10 @@
     (generate-prefixed-temporaries (format-symbol "typed:~a." name)
                                    value-keys))
 
+  (define instance-ids
+    (generate-prefixed-temporaries (format-symbol "instance:~a." name)
+                                   instance-keys))
+
   ;; -----
   ;; make mappings to the new ids
 
@@ -358,7 +396,8 @@
                              (hash-zip data-type-keys data-type-ids)
                              (hash-zip alias-type-keys alias-type-ids)
                              (hash-zip constructor-keys constructor-ids)
-                             (hash-zip value-keys typed-value-ids)))]
+                             (hash-zip value-keys typed-value-ids)
+                             (hash-zip instance-keys instance-ids)))]
          [(key introduced) (in-hash hsh)])
       (values key introduced)))
 
@@ -384,24 +423,24 @@
      type-expansion-ctx))
 
   (define (generate-only-decls predicate)
-    (define-values [stx-bss val-bss]
-      (for*/lists (stx-bss val-bss)
+    (define-values [stx-bss val-bss effss]
+      (for*/lists (stx-bss val-bss effss)
                   ([(key new-id) (in-hash key->introduced)]
                    [decl (in-value (hash-ref s-decls key))]
                    #:when (predicate decl))
         (define decl* (stx-substs decl internal->introduced))
-        (match-define `{,trs ,exprs}
+        (match-define `{,trs ,exprs ,effs}
           (generate-decl-bindings key new-id decl*
                                   #:parent-unique-symbol (syntax-e #'unique-symbol)
                                   #:parent-link-id link-id
                                   #:ctx type-expansion-ctx))
-        (values trs exprs)))
-    (list (append* stx-bss) (append* val-bss)))
+        (values trs exprs effs)))
+    (list (append* stx-bss) (append* val-bss) (append* effss)))
 
   ;; ----------
   ;; generate non-value decls (types and modules)
 
-  (match-define `{,type/mod-stx-bindings ,type/mod-val-bindings}
+  (match-define `{,type/mod-stx-bindings ,type/mod-val-bindings ,type/mod-effs}
     (generate-only-decls
      (λ (d) (or (decl-type? d)
                 (decl-module? d)))))
@@ -412,10 +451,17 @@
   ;; bind types/mods first
   (tec-bind-syntax-bindings type/mod-stx-bindings)
 
-  (match-define `{,val/ctor-stx-bindings ,val/ctor-val-bindings}
+  (match-define `{,val/ctor-stx-bindings ,val/ctor-val-bindings ,val/ctor-effs}
     (generate-only-decls
      (λ (d) (or (decl-val? d)
                 (decl-constructor? d)))))
+
+  ;; ------------------
+  ;; generate instance decls
+
+  (match-define `{,inst-stx-bindings ,inst-val-bindings ,inst-effs}
+    (generate-only-decls
+     (λ (d) (or (decl-instance? d)))))
 
   ;; generate module-var-transformer binding for module name
 
@@ -463,14 +509,22 @@
   (define all-stx-bindings
     (cons module-binding
           (append type/mod-stx-bindings
-                  val/ctor-stx-bindings)))
+                  val/ctor-stx-bindings
+                  inst-stx-bindings)))
 
   (define all-val-bindings
     (append type/mod-val-bindings
-            val/ctor-val-bindings))
+            val/ctor-val-bindings
+            inst-val-bindings))
+
+  (define all-effs
+    (append type/mod-effs
+            val/ctor-effs
+            inst-effs))
 
   (list all-stx-bindings
-        all-val-bindings))
+        all-val-bindings
+        all-effs))
 
 ;; Id Id Signature IntDefCtx -> [Listof [List Id Expr-Stx]]
 ;; adds bindings introduced by the module to the given intdef-ctx. returns
@@ -482,13 +536,16 @@
 (define (syntax-local-bind-module name internal-id signature intdef-ctx)
   ;; NOTE: we ignore the RHS of the value bindings,
   ;;   since this is used for local-expanding, not evalutating.
-  (match-define (list ids/transformers ids/exprs)
+  (match-define (list ids/transformers ids/exprs effs)
     (generate-module-var-bindings name internal-id signature))
   (define/syntax-parse [([stx-id transformer] ...)
                         ([val-id expr] ...)]
     (list ids/transformers ids/exprs))
   (syntax-local-bind-syntaxes (@ val-id) #f intdef-ctx)
   (syntax-local-bind-syntaxes (@ stx-id) #`(values transformer ...) intdef-ctx)
+  (for ([eff (in-list effs)])
+    (define inst (syntax-local-eval eff))
+    (register-local-class-instance! inst))
   (for/list ([id/expr (in-list ids/exprs)])
     (list (internal-definition-context-introduce intdef-ctx (first id/expr))
           (internal-definition-context-introduce intdef-ctx (second id/expr)))))

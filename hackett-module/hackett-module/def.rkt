@@ -3,9 +3,12 @@
  "rep/sig-literals.rkt"
  "dot.rkt"
  "namespace/reqprov.rkt"
+ "util/phase1-eval-defer-reconstruct.rkt"
  racket/pretty
  syntax/parse/define
  (prefix-in hkt: hackett/base)
+ (prefix-in hkt: (only-in (submod hackett/private/class private)
+                          register-class-instance!))
  (prefix-in sig: "sig.rkt")
  (for-syntax racket/base
              racket/syntax
@@ -31,7 +34,8 @@
 
    #:with name- (generate-temporary #'name)
    #:with [([stx-id transformer] ...)
-           ([val-id expr] ...)]
+           ([val-id expr] ...)
+           (eff ...)]
    (generate-module-var-bindings #'name #'name- #'sig)
 
    #'(begin
@@ -39,6 +43,8 @@
        (printf "inferred: ~a\n" 'sig-str)
        (define name- m-)
        (define-syntax stx-id transformer)
+       ...
+       (hkt:register-class-instance! eff)
        ...
        (define val-id expr)
        ...
